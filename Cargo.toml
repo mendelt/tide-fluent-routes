@@ -1,8 +1,14 @@
 [package]
 name = "tide-route-builder"
 version = "0.1.0"
-authors = ["Mendelt Siebenga <msiebenga@gmail.com>"]
 edition = "2018"
+
+authors = ["Mendelt Siebenga <msiebenga@gmail.com>"]
+description = "Tide routebuilder is a library that implements a fluent routing API for Tide"
+repository = "https://github.com/mendelt/tide-route-builder"
+categories = ["command-line-interface"]
+keywords = ["tide", "http", "web", "routing"]
+readme = "../README.md"
 
 [dependencies]
 tide = "0.13.0"
