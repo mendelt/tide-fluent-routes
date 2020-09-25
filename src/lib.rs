@@ -4,7 +4,7 @@ use tide::{Endpoint, http::Method};
 pub trait Router<State: Clone + Send + Sync + 'static> {
     fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<State>);
 
-    fn route(&mut self, _route: impl Fn(RouteBuilder<State>) -> RouteBuilder<State>) {
+    fn route(&mut self) -> RouteBuilder<State> {
         todo!()
     }
 }
