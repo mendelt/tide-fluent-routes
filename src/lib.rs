@@ -32,6 +32,7 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
 
 #[cfg(test)]
 mod test {
+    use tide::Request;
     use super::*;
 
     struct StubRouter {}
@@ -41,29 +42,33 @@ mod test {
         }
     }
 
+    async fn endpoint(_: Request<()>) -> tide::Result {
+        todo!()
+    }
+
     #[test]
     fn should_build_basic_route() {
-        let router = StubRouter {};
+        let mut router = StubRouter {};
 
         router.route()
-            .method(Method::Get, |_| todo!())
-            .method(Method::Post, |_| todo!());
+            .method(Method::Get, endpoint)
+            .method(Method::Post, endpoint);
     }
 
     #[test]
     fn should_build_nested_route() {
-        let router = StubRouter {};
+        let mut router = StubRouter {};
 
         router.route()
-            .method(Method::Get, |_| todo!())
-            .method(Method::Post, |_| todo!());
+            .method(Method::Get, endpoint)
+            .method(Method::Post, endpoint)
             .at("api/v1", |route| route
-                .method(Method::Get, |_| todo!())
-                .method(Method::Post, |_| todo!())
+                .method(Method::Get, endpoint)
+                .method(Method::Post, endpoint)
             )
             .at("api/v2", |route| route
-                .method(Method::Get, |_| todo!())
-                .method(Method::Post, |_| todo!())
+                .method(Method::Get, endpoint)
+                .method(Method::Post, endpoint)
             );
     }
 }
