@@ -25,7 +25,7 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
         todo!()
     }
 
-    pub fn method(self, _path: &str, _method: Method, _endpoint: impl Endpoint<State>) -> RouteBuilder<State> {
+    pub fn method(self, _method: Method, _endpoint: impl Endpoint<State>) -> RouteBuilder<State> {
         todo!()
     }
 }
