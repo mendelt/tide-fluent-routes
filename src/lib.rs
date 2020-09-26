@@ -16,7 +16,7 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
 }
 
 pub struct RouteBuilder<State> {
-    _path: String,
+    _branches: HashMap<String, RouteBuilder<State>>,
     _endpoints: HashMap<Method, Box<dyn Endpoint<State>>>,
 }
 
