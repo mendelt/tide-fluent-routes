@@ -61,8 +61,10 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use tide::Request;
+        use std::{future::Future, pin::Pin};
+
+use super::*;
+    use tide::{Next, Request, Result};
 
     struct StubRouter {}
     impl Router<()> for StubRouter {
@@ -71,12 +73,18 @@ mod test {
         }
     }
 
-    async fn endpoint(_: Request<()>) -> tide::Result {
+    async fn endpoint(_: Request<()>) -> Result {
         todo!()
     }
 
+    fn dummy_middleware<'a>(request: Request<()>, next: Next<'a, ()>) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>>  {
+        Box::pin(async {
+            Ok(next.run(request).await)
+        })
+    }
+
     #[test]
-    fn should_build_basic_route() {
+    fn example_build_basic_route() {
         let mut router = StubRouter {};
 
         router.register(
@@ -87,7 +95,7 @@ mod test {
     }
 
     #[test]
-    fn should_build_nested_route() {
+    fn example_build_nested_route() {
         let mut router = StubRouter {};
 
         router.register(
@@ -97,6 +105,28 @@ mod test {
                 .at("api/v1", |route| {
                     route
                         .method(Method::Get, endpoint)
+                        .method(Method::Post, endpoint)
+                })
+                .at("api/v2", |route| {
+                    route
+                        .method(Method::Get, endpoint)
+                        .method(Method::Post, endpoint)
+                }),
+        );
+    }
+
+    #[test]
+    fn example_build_middleware_route() {
+        let mut router = StubRouter {};
+
+        router.register(
+            root()
+                .method(Method::Get, endpoint)
+                .method(Method::Post, endpoint)
+                .at("api/v1", |route| {
+                    route
+                        .with(dummy_middleware, |route| route
+                            .method(Method::Get, endpoint))
                         .method(Method::Post, endpoint)
                 })
                 .at("api/v2", |route| {
