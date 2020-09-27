@@ -30,12 +30,6 @@ pub struct RouteBuilder<State> {
     endpoints: HashMap<Method, Box<dyn Endpoint<State>>>,
 }
 
-pub enum RouteSpecifier<State> {
-    Root,
-    Path(String),
-    Middleware(Box<dyn Middleware<State>>),
-}
-
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
     pub fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
         self.add_branch(RouteSpecifier::Path(path.to_string()), routes)
@@ -58,13 +52,31 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
         self.endpoints.insert(method, Box::new(endpoint));
         self
     }
+
+    fn get_endpoints(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
+        self.endpoints.into_iter().map(|(method, endpoint)| {
+            EndpointDescriptor(String::new(), Vec::new(), method, endpoint)
+        })
+    }
+}
+
+struct EndpointDescriptor<State>(
+    String,
+    Vec<Box<dyn Middleware<State>>>,
+    Method,
+    Box<dyn Endpoint<State>>,
+);
+
+enum RouteSpecifier<State> {
+    Root,
+    Path(String),
+    Middleware(Box<dyn Middleware<State>>),
 }
 
 #[cfg(test)]
 mod test {
-    use std::{future::Future, pin::Pin};
-
     use super::*;
+    use std::{future::Future, pin::Pin};
     use tide::{Next, Request, Result};
 
     struct StubRouter {}
