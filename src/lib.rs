@@ -37,23 +37,24 @@ pub enum RouteSpecifier<State> {
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
-    pub fn at<R: Fn(RouteBuilder<State>) -> RouteBuilder<State>>(
-        self,
-        _path: &str,
-        routes: R,
-    ) -> RouteBuilder<State> {
-        todo!()
+    pub fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
+        self.add_branch(RouteSpecifier::Path(path.to_string()), routes)
     }
 
-    pub fn with<M: Middleware<State>, R: Fn(RouteBuilder<State>) -> RouteBuilder<State>>(
-        mut self,
-        middleware: M,
-        routes: R,
-    ) -> RouteBuilder<State> {
-        todo!()
+    pub fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
+        self.add_branch(RouteSpecifier::Middleware(Box::new(middleware)), routes)
     }
 
-    pub fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> RouteBuilder<State> {
+    fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSpecifier<State>, routes: R) -> Self {
+        self.branches.push(routes(RouteBuilder {
+            route: spec,
+            branches: Vec::new(),
+            endpoints: HashMap::new(),
+        }));
+        self
+    }
+
+    pub fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
         self.endpoints.insert(method, Box::new(endpoint));
         self
     }
@@ -61,9 +62,9 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
 
 #[cfg(test)]
 mod test {
-        use std::{future::Future, pin::Pin};
+    use std::{future::Future, pin::Pin};
 
-use super::*;
+    use super::*;
     use tide::{Next, Request, Result};
 
     struct StubRouter {}
@@ -77,10 +78,11 @@ use super::*;
         todo!()
     }
 
-    fn dummy_middleware<'a>(request: Request<()>, next: Next<'a, ()>) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>>  {
-        Box::pin(async {
-            Ok(next.run(request).await)
-        })
+    fn dummy_middleware<'a>(
+        request: Request<()>,
+        next: Next<'a, ()>,
+    ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
+        Box::pin(async { Ok(next.run(request).await) })
     }
 
     #[test]
@@ -125,8 +127,9 @@ use super::*;
                 .method(Method::Post, endpoint)
                 .at("api/v1", |route| {
                     route
-                        .with(dummy_middleware, |route| route
-                            .method(Method::Get, endpoint))
+                        .with(dummy_middleware, |route| {
+                            route.method(Method::Get, endpoint)
+                        })
                         .method(Method::Post, endpoint)
                 })
                 .at("api/v2", |route| {
