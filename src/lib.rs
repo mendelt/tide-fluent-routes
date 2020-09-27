@@ -4,8 +4,10 @@ use tide::{http::Method, Endpoint, Middleware};
 pub trait Router<State: Clone + Send + Sync + 'static> {
     fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<State>);
 
-    fn register(&mut self, _routes: RouteBuilder<State>) {
-        todo!()
+    fn register(&mut self, routes: RouteBuilder<State>) {
+        for EndpointDescriptor(path, _middleware, method, endpoint) in routes.build() {
+            self.register_endpoint(&path, method, endpoint)
+        }
     }
 }
 
@@ -53,7 +55,7 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
         self
     }
 
-    fn get_endpoints(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
+    fn build(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
         self.endpoints.into_iter().map(|(method, endpoint)| {
             EndpointDescriptor(String::new(), Vec::new(), method, endpoint)
         })
