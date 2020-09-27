@@ -1,13 +1,13 @@
 [package]
-name = "tide-route-builder"
+name = "tide-fluent-routes"
 version = "0.1.0"
 edition = "2018"
 
 authors = ["Mendelt Siebenga <msiebenga@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "Tide routebuilder is a library that implements a fluent routing API for Tide"
-repository = "https://github.com/mendelt/tide-route-builder"
-categories = ["command-line-interface"]
+description = "Tide fluent routes is a library that implements a fluent routing API for Tide"
+repository = "https://github.com/mendelt/tide-fluent-routes"
+categories = ["network-programming", "web-programming::http-server"]
 keywords = ["tide", "http", "web", "routing"]
 readme = "../README.md"
 
