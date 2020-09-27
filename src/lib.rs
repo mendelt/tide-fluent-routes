@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use tide::{Endpoint, http::Method};
+use tide::{http::Method, Endpoint, Middleware};
 
 pub trait Router<State: Clone + Send + Sync + 'static> {
     fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<State>);
 
-    fn register(&mut self, routes: RouteBuilder<State>) {
+    fn register(&mut self, _routes: RouteBuilder<State>) {
         todo!()
     }
 }
@@ -15,32 +15,54 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
     }
 }
 
-pub fn routes<State>() -> RouteBuilder<State> {
+pub fn root<State>() -> RouteBuilder<State> {
     RouteBuilder {
-        _branches: HashMap::new(),
-        _endpoints: HashMap::new(),
+        route: RouteSpecifier::Root,
+        branches: Vec::new(),
+        endpoints: HashMap::new(),
     }
 }
 
 pub struct RouteBuilder<State> {
-    _branches: HashMap<String, RouteBuilder<State>>,
-    _endpoints: HashMap<Method, Box<dyn Endpoint<State>>>,
+    route: RouteSpecifier<State>,
+
+    branches: Vec<RouteBuilder<State>>,
+    endpoints: HashMap<Method, Box<dyn Endpoint<State>>>,
+}
+
+pub enum RouteSpecifier<State> {
+    Root,
+    Path(String),
+    Middleware(Box<dyn Middleware<State>>),
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
-    pub fn at(self, _path: &str, _subroutes: RouteBuilder<State>) -> RouteBuilder<State> {
+    pub fn at<R: Fn(RouteBuilder<State>) -> RouteBuilder<State>>(
+        self,
+        _path: &str,
+        routes: R,
+    ) -> RouteBuilder<State> {
         todo!()
     }
 
-    pub fn method(self, _method: Method, _endpoint: impl Endpoint<State>) -> RouteBuilder<State> {
+    pub fn with<M: Middleware<State>, R: Fn(RouteBuilder<State>) -> RouteBuilder<State>>(
+        mut self,
+        middleware: M,
+        routes: R,
+    ) -> RouteBuilder<State> {
         todo!()
+    }
+
+    pub fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> RouteBuilder<State> {
+        self.endpoints.insert(method, Box::new(endpoint));
+        self
     }
 }
 
 #[cfg(test)]
 mod test {
-    use tide::Request;
     use super::*;
+    use tide::Request;
 
     struct StubRouter {}
     impl Router<()> for StubRouter {
@@ -57,9 +79,10 @@ mod test {
     fn should_build_basic_route() {
         let mut router = StubRouter {};
 
-        router.register( routes()
-            .method(Method::Get, endpoint)
-            .method(Method::Post, endpoint)
+        router.register(
+            root()
+                .method(Method::Get, endpoint)
+                .method(Method::Post, endpoint),
         );
     }
 
@@ -67,16 +90,20 @@ mod test {
     fn should_build_nested_route() {
         let mut router = StubRouter {};
 
-        router.register(routes()
-            .method(Method::Get, endpoint)
-            .method(Method::Post, endpoint)
-            .at("api/v1", routes()
+        router.register(
+            root()
                 .method(Method::Get, endpoint)
                 .method(Method::Post, endpoint)
-            )
-            .at("api/v2", routes()
-                .method(Method::Get, endpoint)
-                .method(Method::Post, endpoint)
-        ));
+                .at("api/v1", |route| {
+                    route
+                        .method(Method::Get, endpoint)
+                        .method(Method::Post, endpoint)
+                })
+                .at("api/v2", |route| {
+                    route
+                        .method(Method::Get, endpoint)
+                        .method(Method::Post, endpoint)
+                }),
+        );
     }
 }
