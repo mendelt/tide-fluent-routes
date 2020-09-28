@@ -1,5 +1,22 @@
 use std::collections::HashMap;
-use tide::{http::Method, Endpoint, Middleware};
+use tide::{Endpoint, Middleware};
+use tide::http::Method;
+use tide::utils::async_trait;
+
+struct BoxedEndpoint<State>(Box<dyn Endpoint<State>>);
+
+impl<State: Clone + Send + Sync + 'static> BoxedEndpoint<State> {
+    pub fn new(endpoint: impl Endpoint<State>) -> Self {
+        Self(Box::new(endpoint))
+    }
+}
+
+#[async_trait]
+impl<State: Clone + Send + Sync + 'static> Endpoint<State> for BoxedEndpoint<State> {
+    async fn call(&self, req: tide::Request<State>) -> tide::Result {
+        self.0.call(req).await
+    }
+}
 
 pub trait Router<State: Clone + Send + Sync + 'static> {
     fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<State>);
@@ -29,7 +46,7 @@ pub struct RouteBuilder<State> {
     route: RouteSpecifier<State>,
 
     branches: Vec<RouteBuilder<State>>,
-    endpoints: HashMap<Method, Box<dyn Endpoint<State>>>,
+    endpoints: HashMap<Method, BoxedEndpoint<State>>,
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
@@ -51,7 +68,7 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
     }
 
     pub fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
-        self.endpoints.insert(method, Box::new(endpoint));
+        self.endpoints.insert(method, BoxedEndpoint::new(endpoint));
         self
     }
 
@@ -66,7 +83,7 @@ struct EndpointDescriptor<State>(
     String,
     Vec<Box<dyn Middleware<State>>>,
     Method,
-    Box<dyn Endpoint<State>>,
+    BoxedEndpoint<State>,
 );
 
 enum RouteSpecifier<State> {
