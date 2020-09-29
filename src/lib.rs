@@ -151,9 +151,9 @@ mod test {
 
     #[test]
     fn example_build_basic_route() {
-        let mut router = StubRouter {};
+        let mut server = tide::Server::new();
 
-        router.register(
+        server.register(
             root()
                 .method(Method::Get, endpoint)
                 .method(Method::Post, endpoint),
@@ -162,9 +162,9 @@ mod test {
 
     #[test]
     fn example_build_nested_route() {
-        let mut router = StubRouter {};
+        let mut server = tide::Server::new();
 
-        router.register(
+        server.register(
             root()
                 .method(Method::Get, endpoint)
                 .method(Method::Post, endpoint)
@@ -183,9 +183,9 @@ mod test {
 
     #[test]
     fn example_build_middleware_route() {
-        let mut router = StubRouter {};
+        let mut server = tide::Server::new();
 
-        router.register(
+        server.register(
             root()
                 .method(Method::Get, endpoint)
                 .method(Method::Post, endpoint)
