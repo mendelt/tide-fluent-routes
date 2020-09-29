@@ -55,7 +55,7 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
 /// Start building a route. Returns a RouteBuilder for the root of your route
 pub fn root<State>() -> RouteBuilder<State> {
     RouteBuilder {
-        route: RouteSpecifier::Root,
+        route: RouteSegment::Root,
         branches: Vec::new(),
         endpoints: HashMap::new(),
     }
@@ -65,7 +65,7 @@ pub fn root<State>() -> RouteBuilder<State> {
 /// path segments, middleware and endpoints that defines the routes in a Tide application. This tree
 /// can then be returned as a list of routes to each of the endpoints.
 pub struct RouteBuilder<State> {
-    route: RouteSpecifier<State>,
+    route: RouteSegment<State>,
 
     branches: Vec<RouteBuilder<State>>,
     endpoints: HashMap<Method, BoxedEndpoint<State>>,
@@ -74,15 +74,15 @@ pub struct RouteBuilder<State> {
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
     /// Add sub-routes for a path segment
     pub fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
-        self.add_branch(RouteSpecifier::Path(path.to_string()), routes)
+        self.add_branch(RouteSegment::Path(path.to_string()), routes)
     }
 
     /// Add sub-routes for a middleware
     pub fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
-        self.add_branch(RouteSpecifier::Middleware(Box::new(middleware)), routes)
+        self.add_branch(RouteSegment::Middleware(Box::new(middleware)), routes)
     }
 
-    fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSpecifier<State>, routes: R) -> Self {
+    fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSegment<State>, routes: R) -> Self {
         self.branches.push(routes(RouteBuilder {
             route: spec,
             branches: Vec::new(),
@@ -119,7 +119,7 @@ struct EndpointDescriptor<State>(
     BoxedEndpoint<State>,
 );
 
-enum RouteSpecifier<State> {
+enum RouteSegment<State> {
     Root,
     Path(String),
     Middleware(Box<dyn Middleware<State>>),
