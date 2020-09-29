@@ -13,14 +13,15 @@
 )]
 
 use std::collections::HashMap;
-use tide::{Endpoint, Middleware};
 use tide::http::Method;
 use tide::utils::async_trait;
+use tide::{Endpoint, Middleware};
 
 struct BoxedEndpoint<State>(Box<dyn Endpoint<State>>);
 
 impl<State: Clone + Send + Sync + 'static> BoxedEndpoint<State> {
-    pub fn new(endpoint: impl Endpoint<State>) -> Self {
+    /// Wrap an endpoint in a BoxedEndpoint
+    fn new(endpoint: impl Endpoint<State>) -> Self {
         Self(Box::new(endpoint))
     }
 }
@@ -32,9 +33,12 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for BoxedEndpoint<Sta
     }
 }
 
+/// A router is any component where routes can be registered.
 pub trait Router<State: Clone + Send + Sync + 'static> {
+    /// Register a single endpoint on the `Router`
     fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<State>);
 
+    /// Register all routes from a RouteBuilder on the `Router`
     fn register(&mut self, routes: RouteBuilder<State>) {
         for EndpointDescriptor(path, _middleware, method, endpoint) in routes.build() {
             self.register_endpoint(&path, method, endpoint)
@@ -68,10 +72,12 @@ pub struct RouteBuilder<State> {
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
+    /// Add sub-routes for a path segment
     pub fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
         self.add_branch(RouteSpecifier::Path(path.to_string()), routes)
     }
 
+    /// Add sub-routes for a middleware
     pub fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
         self.add_branch(RouteSpecifier::Middleware(Box::new(middleware)), routes)
     }
@@ -85,18 +91,27 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
         self
     }
 
+    /// Add an endpoint
     pub fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
         self.endpoints.insert(method, BoxedEndpoint::new(endpoint));
         self
     }
 
     fn build(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
-        self.endpoints.into_iter().map(|(method, endpoint)| {
+        let local_endpoints = self.endpoints.into_iter().map(|(method, endpoint)| {
             EndpointDescriptor(String::new(), Vec::new(), method, endpoint)
-        })
+        });
+
+        local_endpoints
+    }
+
+    /// Return descriptors for all the sub-endpoints from branches under this route
+    fn build_branch_endpoints(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
+        self.branches.into_iter().flat_map(RouteBuilder::build)
     }
 }
 
+/// Describes an endpoint, the path to it, its middleware and its HttpMethod
 struct EndpointDescriptor<State>(
     String,
     Vec<Box<dyn Middleware<State>>>,
