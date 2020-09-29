@@ -1,3 +1,5 @@
+//! Tide Fluent Routes implements a fluent api to define your tide routes.
+
 // Turn on warnings for some lints
 #![warn(
     missing_debug_implementations,
@@ -46,6 +48,7 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
     }
 }
 
+/// Start building a route. Returns a RouteBuilder for the root of your route
 pub fn root<State>() -> RouteBuilder<State> {
     RouteBuilder {
         route: RouteSpecifier::Root,
@@ -54,6 +57,9 @@ pub fn root<State>() -> RouteBuilder<State> {
     }
 }
 
+/// A Builder for Tide routes. RouteBuilders can be composed into a tree that represents the tree of
+/// path segments, middleware and endpoints that defines the routes in a Tide application. This tree
+/// can then be returned as a list of routes to each of the endpoints.
 pub struct RouteBuilder<State> {
     route: RouteSpecifier<State>,
 
