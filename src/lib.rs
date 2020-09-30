@@ -98,11 +98,13 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
     }
 
     fn build(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
-        let local_endpoints = self.endpoints.into_iter().map(|(method, endpoint)| {
+        let local_endpoints: Vec<EndpointDescriptor<State>> = self.endpoints.into_iter().map(|(method, endpoint)| {
             EndpointDescriptor(String::new(), Vec::new(), method, endpoint)
-        });
+        }).collect();
 
-        local_endpoints
+        let sub_endpoints: Vec<EndpointDescriptor<State>> = self.branches.into_iter().flat_map(RouteBuilder::build).collect();
+
+        local_endpoints.into_iter().chain(sub_endpoints.into_iter())
     }
 
     /// Return descriptors for all the sub-endpoints from branches under this route
