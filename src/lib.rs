@@ -1,4 +1,31 @@
 //! Tide Fluent Routes implements a fluent api to define your tide routes.
+//!
+//! ```rust
+//! # use tide::{Next, Request, Result};
+//! # use tide::http::Method;
+//! # use tide_fluent_routes::test_helpers::*;
+//! # use tide_fluent_routes::*;
+//!
+//! let mut server = tide::Server::new();
+//!
+//! server.register(
+//!     root()
+//!         .method(Method::Get, endpoint)
+//!         .method(Method::Post, endpoint)
+//!         .at("api/v1", |route| {
+//!             route
+//!                 .with(dummy_middleware, |route| {
+//!                     route.method(Method::Get, endpoint)
+//!                 })
+//!                .method(Method::Post, endpoint)
+//!         })
+//!         .at("api/v2", |route| {
+//!             route
+//!                 .method(Method::Get, endpoint)
+//!                 .method(Method::Post, endpoint)
+//!         }),
+//! );
+//! ```
 
 // Turn on warnings for some lints
 #![warn(
@@ -128,28 +155,27 @@ enum RouteSegment<State> {
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
+mod test_helpers {
     use std::{future::Future, pin::Pin};
     use tide::{Next, Request, Result};
 
-    struct StubRouter {}
-    impl Router<()> for StubRouter {
-        fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<()>) {
-            todo!()
-        }
-    }
-
-    async fn endpoint(_: Request<()>) -> Result {
+    pub async fn endpoint(_: Request<()>) -> Result {
         todo!()
     }
 
-    fn dummy_middleware<'a>(
+    pub fn dummy_middleware<'a>(
         request: Request<()>,
         next: Next<'a, ()>,
     ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
         Box::pin(async { Ok(next.run(request).await) })
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use tide::http::Method;
+    use super::test_helpers::*;
 
     #[test]
     fn example_build_basic_route() {
@@ -173,29 +199,6 @@ mod test {
                 .at("api/v1", |route| {
                     route
                         .method(Method::Get, endpoint)
-                        .method(Method::Post, endpoint)
-                })
-                .at("api/v2", |route| {
-                    route
-                        .method(Method::Get, endpoint)
-                        .method(Method::Post, endpoint)
-                }),
-        );
-    }
-
-    #[test]
-    fn example_build_middleware_route() {
-        let mut server = tide::Server::new();
-
-        server.register(
-            root()
-                .method(Method::Get, endpoint)
-                .method(Method::Post, endpoint)
-                .at("api/v1", |route| {
-                    route
-                        .with(dummy_middleware, |route| {
-                            route.method(Method::Get, endpoint)
-                        })
                         .method(Method::Post, endpoint)
                 })
                 .at("api/v2", |route| {
