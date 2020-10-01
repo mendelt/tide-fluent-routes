@@ -1,13 +1,72 @@
 //! Tide Fluent Routes implements a fluent api to define your tide routes.
 //!
+//! You can register simple endpoints like this;
 //! ```rust
-//! # use tide::{Next, Request, Result};
+//! # use tide::{Request, Result};
 //! # use tide::http::Method;
-//! # use tide_fluent_routes::test_helpers::*;
 //! # use tide_fluent_routes::*;
+//! #
+//! # pub async fn endpoint(_: Request<()>) -> Result {
+//! #     todo!()
+//! # }
+//! use tide_fluent_routes::*;
 //!
 //! let mut server = tide::Server::new();
 //!
+//! server.register(
+//!    root()
+//!        .method(Method::Get, endpoint)
+//!        .method(Method::Post, endpoint),
+//! );
+//! ```
+//!
+//! Or a more complete tree of urls and endpoints like this;
+//! ```rust
+//! # use tide::{Request, Result};
+//! # use tide::http::Method;
+//! # use tide_fluent_routes::*;
+//! #
+//! # pub async fn endpoint(_: Request<()>) -> Result {
+//! #     todo!()
+//! # }
+//! #
+//! # let mut server = tide::Server::new();
+//!
+//! server.register(
+//!     root()
+//!         .method(Method::Get, endpoint)
+//!         .method(Method::Post, endpoint)
+//!         .at("api/v1", |route| {
+//!             route
+//!                 .method(Method::Get, endpoint)
+//!                 .method(Method::Post, endpoint)
+//!         })
+//!         .at("api/v2", |route| {
+//!             route
+//!                 .method(Method::Get, endpoint)
+//!                 .method(Method::Post, endpoint)
+//!         }),
+//! );
+//! ```
+//!
+//! Adding middleware is easy, and its very clear where the middleware is applied and where not;
+//! ```rust
+//! # use std::{future::Future, pin::Pin};
+//! # use tide::{Next, Request, Result};
+//! # use tide::http::Method;
+//! # use tide_fluent_routes::*;
+//! #
+//! # pub async fn endpoint(_: Request<()>) -> Result {
+//! #     todo!()
+//! # }
+//! #
+//! # pub fn dummy_middleware<'a>(
+//! #     request: Request<()>,
+//! #     next: Next<'a, ()>,
+//! # ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
+//! #     Box::pin(async { Ok(next.run(request).await) })
+//! # }
+//! # let mut server = tide::Server::new();
 //! server.register(
 //!     root()
 //!         .method(Method::Get, endpoint)
@@ -154,8 +213,8 @@ enum RouteSegment<State> {
     Middleware(Box<dyn Middleware<State>>),
 }
 
-#[cfg(test)]
-mod test_helpers {
+#[cfg(doctest)]
+pub mod doctest_helpers {
     use std::{future::Future, pin::Pin};
     use tide::{Next, Request, Result};
 
@@ -174,38 +233,5 @@ mod test_helpers {
 #[cfg(test)]
 mod test {
     use super::*;
-    use tide::http::Method;
-    use super::test_helpers::*;
 
-    #[test]
-    fn example_build_basic_route() {
-        let mut server = tide::Server::new();
-
-        server.register(
-            root()
-                .method(Method::Get, endpoint)
-                .method(Method::Post, endpoint),
-        );
-    }
-
-    #[test]
-    fn example_build_nested_route() {
-        let mut server = tide::Server::new();
-
-        server.register(
-            root()
-                .method(Method::Get, endpoint)
-                .method(Method::Post, endpoint)
-                .at("api/v1", |route| {
-                    route
-                        .method(Method::Get, endpoint)
-                        .method(Method::Post, endpoint)
-                })
-                .at("api/v2", |route| {
-                    route
-                        .method(Method::Get, endpoint)
-                        .method(Method::Post, endpoint)
-                }),
-        );
-    }
 }
