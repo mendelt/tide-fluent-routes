@@ -192,11 +192,6 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
 
         local_endpoints.into_iter().chain(sub_endpoints.into_iter())
     }
-
-    /// Return descriptors for all the sub-endpoints from branches under this route
-    fn build_branch_endpoints(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
-        self.branches.into_iter().flat_map(RouteBuilder::build)
-    }
 }
 
 /// Describes an endpoint, the path to it, its middleware and its HttpMethod
