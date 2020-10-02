@@ -3,8 +3,7 @@
 //! You can register simple endpoints like this;
 //! ```rust
 //! # use tide::{Request, Result};
-//! # use tide::http::Method;
-//! # use tide_fluent_routes::*;
+//! # use tide_fluent_routes::prelude::*;
 //! #
 //! # pub async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
@@ -23,8 +22,7 @@
 //! Or a more complete tree of urls and endpoints like this;
 //! ```rust
 //! # use tide::{Request, Result};
-//! # use tide::http::Method;
-//! # use tide_fluent_routes::*;
+//! # use tide_fluent_routes::prelude::*;
 //! #
 //! # pub async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
@@ -53,8 +51,7 @@
 //! ```rust
 //! # use std::{future::Future, pin::Pin};
 //! # use tide::{Next, Request, Result};
-//! # use tide::http::Method;
-//! # use tide_fluent_routes::*;
+//! # use tide_fluent_routes::prelude::*;
 //! #
 //! # pub async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
@@ -89,7 +86,6 @@
 // Turn on warnings for some lints
 #![warn(
     missing_debug_implementations,
-    missing_copy_implementations,
     missing_docs,
     trivial_casts,
     trivial_numeric_casts,
@@ -208,21 +204,10 @@ enum RouteSegment<State> {
     Middleware(Box<dyn Middleware<State>>),
 }
 
-#[cfg(doctest)]
-pub mod doctest_helpers {
-    use std::{future::Future, pin::Pin};
-    use tide::{Next, Request, Result};
-
-    pub async fn endpoint(_: Request<()>) -> Result {
-        todo!()
-    }
-
-    pub fn dummy_middleware<'a>(
-        request: Request<()>,
-        next: Next<'a, ()>,
-    ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
-        Box::pin(async { Ok(next.run(request).await) })
-    }
+/// Import types to use tide_fluent_routes
+pub mod prelude {
+    pub use super::{Router, root, RouteBuilder};
+    pub use tide::http::Method;
 }
 
 #[cfg(test)]
