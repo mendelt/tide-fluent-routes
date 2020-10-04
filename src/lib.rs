@@ -121,7 +121,7 @@ pub trait Router<State: Clone + Send + Sync + 'static> {
     fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<State>);
 
     /// Register all routes from a RouteBuilder on the `Router`
-    fn register(&mut self, routes: RouteBuilder<State>) {
+    fn register(&mut self, routes: RouteSegment<State>) {
         for EndpointDescriptor(path, _middleware, method, endpoint) in routes.build() {
             self.register_endpoint(&path, method, endpoint)
         }
@@ -135,9 +135,9 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
 }
 
 /// Start building a route. Returns a RouteBuilder for the root of your route
-pub fn root<State>() -> RouteBuilder<State> {
-    RouteBuilder {
-        route: RouteSegment::Root,
+pub fn root<State>() -> RouteSegment<State> {
+    RouteSegment {
+        route: RouteSegmentKind::Root,
         branches: Vec::new(),
         endpoints: HashMap::new(),
     }
@@ -146,26 +146,32 @@ pub fn root<State>() -> RouteBuilder<State> {
 /// A Builder for Tide routes. RouteBuilders can be composed into a tree that represents the tree of
 /// path segments, middleware and endpoints that defines the routes in a Tide application. This tree
 /// can then be returned as a list of routes to each of the endpoints.
-pub struct RouteBuilder<State> {
-    route: RouteSegment<State>,
+pub struct RouteSegment<State> {
+    route: RouteSegmentKind<State>,
 
-    branches: Vec<RouteBuilder<State>>,
+    branches: Vec<RouteSegment<State>>,
     endpoints: HashMap<Method, BoxedEndpoint<State>>,
 }
 
-impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
+enum RouteSegmentKind<State> {
+    Root,
+    Path(String),
+    Middleware(Box<dyn Middleware<State>>),
+}
+
+impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     /// Add sub-routes for a path segment
     pub fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
-        self.add_branch(RouteSegment::Path(path.to_string()), routes)
+        self.add_branch(RouteSegmentKind::Path(path.to_string()), routes)
     }
 
     /// Add sub-routes for a middleware
     pub fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
-        self.add_branch(RouteSegment::Middleware(Box::new(middleware)), routes)
+        self.add_branch(RouteSegmentKind::Middleware(Box::new(middleware)), routes)
     }
 
-    fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSegment<State>, routes: R) -> Self {
-        self.branches.push(routes(RouteBuilder {
+    fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSegmentKind<State>, routes: R) -> Self {
+        self.branches.push(routes(RouteSegment {
             route: spec,
             branches: Vec::new(),
             endpoints: HashMap::new(),
@@ -184,7 +190,7 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> {
             EndpointDescriptor(String::new(), Vec::new(), method, endpoint)
         }).collect();
 
-        let sub_endpoints: Vec<EndpointDescriptor<State>> = self.branches.into_iter().flat_map(RouteBuilder::build).collect();
+        let sub_endpoints: Vec<EndpointDescriptor<State>> = self.branches.into_iter().flat_map(RouteSegment::build).collect();
 
         local_endpoints.into_iter().chain(sub_endpoints.into_iter())
     }
@@ -198,15 +204,9 @@ struct EndpointDescriptor<State>(
     BoxedEndpoint<State>,
 );
 
-enum RouteSegment<State> {
-    Root,
-    Path(String),
-    Middleware(Box<dyn Middleware<State>>),
-}
-
 /// Import types to use tide_fluent_routes
 pub mod prelude {
-    pub use super::{Router, root, RouteBuilder};
+    pub use super::{Router, root, RouteSegment};
     pub use tide::http::Method;
 }
 
