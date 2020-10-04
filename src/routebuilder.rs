@@ -16,3 +16,18 @@ pub trait RouteBuilder<State: Clone + Send + Sync + 'static>: Sized {
     /// Add an endpoint
     fn method(self, method: Method, endpoint: impl Endpoint<State>) -> Self;
 }
+
+/// Some extension methods for the routebuilder to make the routing dsl a bit nicer
+pub trait RouteBuilderExt<State: Clone + Send + Sync + 'static> : RouteBuilder<State> {
+    /// Add an HTTP GET endpoint
+    fn get(self, endpoint: impl Endpoint<State>) -> Self {
+        self.method(Method::Get, endpoint)
+    }
+
+    /// Add an HTTP POST endpoint
+    fn post(self, endpoint: impl Endpoint<State>) -> Self {
+        self.method(Method::Post, endpoint)
+    }
+}
+
+impl<State: Clone + Send + Sync + 'static, R: RouteBuilder<State>> RouteBuilderExt<State> for R {}

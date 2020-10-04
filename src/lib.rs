@@ -66,19 +66,19 @@
 //! # let mut server = tide::Server::new();
 //! server.register(
 //!     root()
-//!         .method(Method::Get, endpoint)
-//!         .method(Method::Post, endpoint)
+//!         .get(endpoint)
+//!         .post(endpoint)
 //!         .at("api/v1", |route| {
 //!             route
 //!                 .with(dummy_middleware, |route| {
-//!                     route.method(Method::Get, endpoint)
+//!                     route.get(endpoint)
 //!                 })
-//!                .method(Method::Post, endpoint)
+//!                .post(endpoint)
 //!         })
 //!         .at("api/v2", |route| {
 //!             route
-//!                 .method(Method::Get, endpoint)
-//!                 .method(Method::Post, endpoint)
+//!                 .get(endpoint)
+//!                 .get(endpoint)
 //!         }),
 //! );
 //! ```
@@ -197,7 +197,7 @@ struct EndpointDescriptor<State>(
 pub mod prelude {
     pub use super::{root, RouteSegment};
     pub use super::router::Router;
-    pub use super::routebuilder::RouteBuilder;
+    pub use super::routebuilder::{RouteBuilder, RouteBuilderExt};
     pub use tide::http::Method;
 }
 
