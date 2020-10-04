@@ -143,6 +143,19 @@ pub fn root<State>() -> RouteSegment<State> {
     }
 }
 
+/// A routebuilder can be used to define routes by adding path segments, middelwares and endpoints
+/// to a route tree
+pub trait RouteBuilder<State: Clone + Send + Sync + 'static>: Sized {
+    /// Add a path segment with a set of sub-routes
+    fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self;
+
+    /// Add middleware with a set of sub-routes
+    fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self;
+
+    /// Add an endpoint
+    fn method(self, method: Method, endpoint: impl Endpoint<State>) -> Self;
+}
+
 /// A Builder for Tide routes. RouteBuilders can be composed into a tree that represents the tree of
 /// path segments, middleware and endpoints that defines the routes in a Tide application. This tree
 /// can then be returned as a list of routes to each of the endpoints.
@@ -160,28 +173,13 @@ enum RouteSegmentKind<State> {
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
-    /// Add sub-routes for a path segment
-    pub fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
-        self.add_branch(RouteSegmentKind::Path(path.to_string()), routes)
-    }
-
-    /// Add sub-routes for a middleware
-    pub fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
-        self.add_branch(RouteSegmentKind::Middleware(Box::new(middleware)), routes)
-    }
-
+    /// Add a branch, helper method for at and with methods
     fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSegmentKind<State>, routes: R) -> Self {
         self.branches.push(routes(RouteSegment {
             route: spec,
             branches: Vec::new(),
             endpoints: HashMap::new(),
         }));
-        self
-    }
-
-    /// Add an endpoint
-    pub fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
-        self.endpoints.insert(method, BoxedEndpoint::new(endpoint));
         self
     }
 
@@ -193,6 +191,24 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
         let sub_endpoints: Vec<EndpointDescriptor<State>> = self.branches.into_iter().flat_map(RouteSegment::build).collect();
 
         local_endpoints.into_iter().chain(sub_endpoints.into_iter())
+    }
+}
+
+impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<State> {
+    /// Add an endpoint
+    fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
+        self.endpoints.insert(method, BoxedEndpoint::new(endpoint));
+        self
+    }
+
+    /// Add sub-routes for a path segment
+    fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
+        self.add_branch(RouteSegmentKind::Path(path.to_string()), routes)
+    }
+
+    /// Add sub-routes for a middleware
+    fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
+        self.add_branch(RouteSegmentKind::Middleware(Box::new(middleware)), routes)
     }
 }
 
