@@ -94,6 +94,8 @@
     unused_qualifications
 )]
 
+pub mod router;
+
 use std::collections::HashMap;
 use tide::http::Method;
 use tide::utils::async_trait;
@@ -112,25 +114,6 @@ impl<State: Clone + Send + Sync + 'static> BoxedEndpoint<State> {
 impl<State: Clone + Send + Sync + 'static> Endpoint<State> for BoxedEndpoint<State> {
     async fn call(&self, req: tide::Request<State>) -> tide::Result {
         self.0.call(req).await
-    }
-}
-
-/// A router is any component where routes can be registered.
-pub trait Router<State: Clone + Send + Sync + 'static> {
-    /// Register a single endpoint on the `Router`
-    fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<State>);
-
-    /// Register all routes from a RouteBuilder on the `Router`
-    fn register(&mut self, routes: RouteSegment<State>) {
-        for EndpointDescriptor(path, _middleware, method, endpoint) in routes.build() {
-            self.register_endpoint(&path, method, endpoint)
-        }
-    }
-}
-
-impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State> {
-    fn register_endpoint(&mut self, path: &str, method: Method, endpoint: impl Endpoint<State>) {
-        self.at(path).method(method, endpoint);
     }
 }
 
@@ -212,7 +195,8 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
     }
 }
 
-/// Describes an endpoint, the path to it, its middleware and its HttpMethod
+/// Describes all information for registering an endpoint, the path to it, its middleware
+/// and its HttpMethod
 struct EndpointDescriptor<State>(
     String,
     Vec<Box<dyn Middleware<State>>>,
@@ -222,7 +206,8 @@ struct EndpointDescriptor<State>(
 
 /// Import types to use tide_fluent_routes
 pub mod prelude {
-    pub use super::{Router, root, RouteSegment};
+    pub use super::{root, RouteSegment};
+    pub use super::router::Router;
     pub use tide::http::Method;
 }
 
