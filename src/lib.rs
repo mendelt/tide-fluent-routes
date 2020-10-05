@@ -14,8 +14,8 @@
 //!
 //! server.register(
 //!    root()
-//!        .method(Method::Get, endpoint)
-//!        .method(Method::Post, endpoint),
+//!        .get(endpoint)
+//!        .post(endpoint),
 //! );
 //! ```
 //!
@@ -32,17 +32,17 @@
 //!
 //! server.register(
 //!     root()
-//!         .method(Method::Get, endpoint)
-//!         .method(Method::Post, endpoint)
+//!         .get(endpoint)
+//!         .post(endpoint)
 //!         .at("api/v1", |route| {
 //!             route
-//!                 .method(Method::Get, endpoint)
-//!                 .method(Method::Post, endpoint)
+//!                 .get(endpoint)
+//!                 .post(endpoint)
 //!         })
 //!         .at("api/v2", |route| {
 //!             route
-//!                 .method(Method::Get, endpoint)
-//!                 .method(Method::Post, endpoint)
+//!                 .get(endpoint)
+//!                 .post(endpoint)
 //!         }),
 //! );
 //! ```
