@@ -133,9 +133,8 @@ pub fn root<State>() -> RouteSegment<State> {
 /// can then be returned as a list of routes to each of the endpoints.
 pub struct RouteSegment<State> {
     route: RouteSegmentKind<State>,
-
     branches: Vec<RouteSegment<State>>,
-    endpoints: HashMap<Method, BoxedEndpoint<State>>,
+    endpoints: HashMap<Option<Method>, BoxedEndpoint<State>>,
 }
 
 enum RouteSegmentKind<State> {
@@ -169,7 +168,12 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<State> {
     /// Add an endpoint
     fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
-        self.endpoints.insert(method, BoxedEndpoint::new(endpoint));
+        self.endpoints.insert(Some(method), BoxedEndpoint::new(endpoint));
+        self
+    }
+
+    fn all(mut self, endpoint: impl Endpoint<State>) -> Self {
+        self.endpoints.insert(None, BoxedEndpoint::new(endpoint));
         self
     }
 
@@ -189,7 +193,7 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
 struct EndpointDescriptor<State>(
     String,
     Vec<Box<dyn Middleware<State>>>,
-    Method,
+    Option<Method>,
     BoxedEndpoint<State>,
 );
 

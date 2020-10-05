@@ -13,8 +13,11 @@ pub trait RouteBuilder<State: Clone + Send + Sync + 'static>: Sized {
     /// Add middleware with a set of sub-routes
     fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self;
 
-    /// Add an endpoint
+    /// Add an endpoint for an http method
     fn method(self, method: Method, endpoint: impl Endpoint<State>) -> Self;
+
+    /// Add a catchall endpoint
+    fn all(self, endpoint: impl Endpoint<State>) -> Self;
 }
 
 /// Some extension methods for the routebuilder to make the routing dsl a bit nicer
