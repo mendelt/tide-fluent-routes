@@ -16,7 +16,7 @@ pub trait Router<State: Clone + Send + Sync + 'static> {
 
     /// Register all routes from a RouteBuilder on the `Router`
     fn register(&mut self, routes: RouteSegment<State>) {
-        for EndpointDescriptor(path, _middleware, method, endpoint) in routes.build() {
+        for EndpointDescriptor(path, method, _middleware, endpoint) in routes.build() {
             self.register_endpoint(&path, method, endpoint)
         }
     }
