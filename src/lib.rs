@@ -224,4 +224,27 @@ mod test {
 
         assert_eq!(routes.len(), 1);
     }
+
+    #[test]
+    fn should_build_multiple_endpoints() {
+        let routes: Vec<_> = root::<()>()
+            .get(|_| async { Ok("") })
+            .post(|_| async { Ok("") })
+            .build()
+            .collect();
+
+        assert_eq!(routes.len(), 2);
+    }
+
+    #[test]
+    fn should_build_sub_endpoints() {
+        let routes: Vec<_> = root::<()>()
+            .at("sub_path", |r| {
+                r.get(|_| async { Ok("") }).post(|_| async { Ok("") })
+            })
+            .build()
+            .collect();
+
+        assert_eq!(routes.len(), 2);
+    }
 }

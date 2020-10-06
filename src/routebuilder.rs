@@ -1,8 +1,8 @@
 //! The RouteBuilder trait defines the internal dsl to build route trees as implemented by all
 //! RouteSegments
 
-use tide::{Endpoint, Middleware};
 use tide::http::Method;
+use tide::{Endpoint, Middleware};
 
 /// A routebuilder can be used to define routes by adding path segments, middelwares and endpoints
 /// to a route tree
@@ -21,7 +21,7 @@ pub trait RouteBuilder<State: Clone + Send + Sync + 'static>: Sized {
 }
 
 /// Some extension methods for the routebuilder to make the routing dsl a bit nicer
-pub trait RouteBuilderExt<State: Clone + Send + Sync + 'static> : RouteBuilder<State> {
+pub trait RouteBuilderExt<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
     /// Add an HTTP GET endpoint
     fn get(self, endpoint: impl Endpoint<State>) -> Self {
         self.method(Method::Get, endpoint)
