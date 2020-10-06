@@ -247,4 +247,19 @@ mod test {
 
         assert_eq!(routes.len(), 2);
     }
+
+    #[test]
+    fn should_build_endpoint_path() {
+        let routes: Vec<_> = root::<()>()
+            .at("path", |r| {
+                r.at("subpath", |r|
+                    r.get(|_| async { Ok("") })
+            )})
+            .build()
+            .collect();
+
+        assert_eq!(routes.len(), 1);
+        assert_eq!(routes.get(0).unwrap().1, Some(Method::Get));
+        assert_eq!(routes.get(0).unwrap().0, "path/subpath".to_string());
+    }
 }
