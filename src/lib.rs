@@ -208,5 +208,12 @@ pub mod prelude {
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::prelude::*;
 
+    #[test]
+    fn should_build_single_endpoint() {
+        let routes: Vec<_> = root::<()>().get(|_| async {Ok("")}).build().collect();
+
+        assert_eq!(routes.len(), 1);
+    }
 }
