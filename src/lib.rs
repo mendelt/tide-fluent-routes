@@ -94,11 +94,11 @@
     unused_qualifications
 )]
 
-pub mod router;
 pub mod routebuilder;
+pub mod router;
 
-use std::collections::HashMap;
 use routebuilder::RouteBuilder;
+use std::collections::HashMap;
 use tide::http::Method;
 use tide::utils::async_trait;
 use tide::{Endpoint, Middleware};
@@ -155,11 +155,19 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     }
 
     fn build(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
-        let local_endpoints: Vec<EndpointDescriptor<State>> = self.endpoints.into_iter().map(|(method, endpoint)| {
-            EndpointDescriptor(String::new(), Vec::new(), method, endpoint)
-        }).collect();
+        let local_endpoints: Vec<EndpointDescriptor<State>> = self
+            .endpoints
+            .into_iter()
+            .map(|(method, endpoint)| {
+                EndpointDescriptor(String::new(), method, Vec::new(), endpoint)
+            })
+            .collect();
 
-        let sub_endpoints: Vec<EndpointDescriptor<State>> = self.branches.into_iter().flat_map(RouteSegment::build).collect();
+        let sub_endpoints: Vec<EndpointDescriptor<State>> = self
+            .branches
+            .into_iter()
+            .flat_map(RouteSegment::build)
+            .collect();
 
         local_endpoints.into_iter().chain(sub_endpoints.into_iter())
     }
@@ -168,7 +176,8 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<State> {
     /// Add an endpoint
     fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
-        self.endpoints.insert(Some(method), BoxedEndpoint::new(endpoint));
+        self.endpoints
+            .insert(Some(method), BoxedEndpoint::new(endpoint));
         self
     }
 
@@ -192,27 +201,26 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
 /// and its HttpMethod
 struct EndpointDescriptor<State>(
     String,
-    Vec<Box<dyn Middleware<State>>>,
     Option<Method>,
+    Vec<Box<dyn Middleware<State>>>,
     BoxedEndpoint<State>,
 );
 
 /// Import types to use tide_fluent_routes
 pub mod prelude {
-    pub use super::{root, RouteSegment};
-    pub use super::router::Router;
     pub use super::routebuilder::{RouteBuilder, RouteBuilderExt};
+    pub use super::router::Router;
+    pub use super::{root, RouteSegment};
     pub use tide::http::Method;
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use super::prelude::*;
 
     #[test]
     fn should_build_single_endpoint() {
-        let routes: Vec<_> = root::<()>().get(|_| async {Ok("")}).build().collect();
+        let routes: Vec<_> = root::<()>().get(|_| async { Ok("") }).build().collect();
 
         assert_eq!(routes.len(), 1);
     }
