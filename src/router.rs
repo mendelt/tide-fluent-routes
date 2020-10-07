@@ -34,7 +34,6 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
         _middleware:  &[Arc<dyn Middleware<State>>],
         endpoint: impl Endpoint<State>,
     ) {
-        let route = self.at(path);
         // let endpoint = MiddlewareEndpoint::wrap_with_middleware(endpoint, &middleware);
 
         // if method is specified then register this method, otherwise register endpoint as a catch_all
