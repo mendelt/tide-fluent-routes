@@ -15,7 +15,6 @@
 //! ```rust
 //! # use tide::{Request, Result};
 //! # use tide_fluent_routes::prelude::*;
-//! #
 //! # pub async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
 //! # }
@@ -36,11 +35,9 @@
 //! ```rust
 //! # use tide::{Request, Result};
 //! # use tide_fluent_routes::prelude::*;
-//! #
 //! # pub async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
 //! # }
-//! #
 //! # let mut server = tide::Server::new();
 //!
 //! server.register(
@@ -69,11 +66,9 @@
 //! # use std::{future::Future, pin::Pin};
 //! # use tide::{Next, Request, Result};
 //! # use tide_fluent_routes::prelude::*;
-//! #
 //! # pub async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
 //! # }
-//! #
 //! # pub fn dummy_middleware<'a>(
 //! #     request: Request<()>,
 //! #     next: Next<'a, ()>,

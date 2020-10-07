@@ -15,7 +15,6 @@ RouteBuilder.
 A RouteBuilder can be initialized using the `route()` method.
 You can register simple endpoints like this;
 ```rust
-#
 use tide_fluent_routes::*;
 
 let mut server = tide::Server::new();
@@ -31,8 +30,6 @@ can be extended using `at` but this method takes a router closure that allows bu
 as a tree.
 A complete route tree can be defined like this;
 ```rust
-#
-#
 
 server.register(
     root()
@@ -57,8 +54,6 @@ be difficult to maintain. Adding middleware to a tree is easy, and its very clea
 middleware is applied and where not; (this is still a prototype and middleware is not actually
 added right now)
 ```rust
-#
-#
 server.register(
     root()
         .get(endpoint)
