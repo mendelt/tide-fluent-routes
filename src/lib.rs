@@ -97,6 +97,7 @@
 pub mod routebuilder;
 pub mod router;
 
+use std::sync::Arc;
 use routebuilder::RouteBuilder;
 use std::collections::HashMap;
 use tide::http::Method;
@@ -202,7 +203,7 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
 struct EndpointDescriptor<State>(
     String,
     Option<Method>,
-    Vec<Box<dyn Middleware<State>>>,
+    Vec<Arc<dyn Middleware<State>>>,
     BoxedEndpoint<State>,
 );
 
