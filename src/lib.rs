@@ -1,5 +1,16 @@
-//! Tide Fluent Routes implements a fluent api to define your tide routes.
+//! Tide Fluent Routes is a fluent api to define routes for the Tide HTTP framework.
+//! At the moment it supports setting up paths, you can integrate middleware at any place in the
+//! route-tree and you can integrate endpoints.
+//! Some things that are possible with Tide-native routes are not (yet) possible;
+//! - middleware does not work for now, there is support missing for this in Tide
+//! - Tide prefix routes are not implemented
+//! - you can not nest Tide servers
+//! - serving directories is not possible but a version of this is planned
 //!
+//! To use this you can import Tide Fluent Routes with `use tide_fluent_routes::prelude::* it
+//! introduces the `register` extension method on the `Tide::Server to register routes from a
+//! RouteBuilder.
+//! A RouteBuilder can be initialized using the `route()` method.
 //! You can register simple endpoints like this;
 //! ```rust
 //! # use tide::{Request, Result};
@@ -18,8 +29,10 @@
 //!        .post(endpoint),
 //! );
 //! ```
-//!
-//! Or a more complete tree of urls and endpoints like this;
+//! Fluent Routes follows conventions from Tide. All HTTP verbs are supported the same way. Paths
+//! can be extended using `at` but this method takes a router closure that allows building the route
+//! as a tree.
+//! A complete route tree can be defined like this;
 //! ```rust
 //! # use tide::{Request, Result};
 //! # use tide_fluent_routes::prelude::*;
@@ -46,8 +59,12 @@
 //!         }),
 //! );
 //! ```
+//! This eliminates the need to introduce variables for partial pieces of your route tree.
 //!
-//! Adding middleware is easy, and its very clear where the middleware is applied and where not;
+//! Another problem with Tide routes is that middleware that is only active for certain routes can 
+//! be difficult to maintain. Adding middleware to a tree is easy, and its very clear where the 
+//! middleware is applied and where not; (this is still a prototype and middleware is not actually
+//! added right now)
 //! ```rust
 //! # use std::{future::Future, pin::Pin};
 //! # use tide::{Next, Request, Result};
