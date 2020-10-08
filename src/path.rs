@@ -29,14 +29,19 @@ mod test {
     use super::*;
 
     #[test]
-    fn should_add_slash_between_segments() {
-        let path = Path::new().join("tst").join("tst");
+    fn should_handle_slashes_between_segments() {
+        let path = Path::new()
+            .join("tst")
+            .join("tst")
+            .join("/tst/")
+            .join("tst///")
+            .join("////tst");
 
-        assert_eq!(path.to_string(), "tst/tst");
+        assert_eq!(path.to_string(), "tst/tst/tst/tst/tst");
     }
 
     #[test]
-    fn should_preserve_slash_prefix() {
+    fn should_preserve_prefix_slash() {
         let path = Path::new().join("/tst").join("tst");
 
         assert_eq!(path.to_string(), "/tst/tst");
@@ -47,26 +52,5 @@ mod test {
         let path = Path::new().join("tst").join("tst/");
 
         assert_eq!(path.to_string(), "tst/tst/");
-    }
-
-    #[test]
-    fn should_not_add_slashes_when_provided() {
-        let path = Path::new().join("/tst").join("/tst/");
-
-        assert_eq!(path.to_string(), "/tst/tst/");
-    }
-
-    #[test]
-    fn should_remove_extra_slashes() {
-        let path = Path::new().join("tst/").join("/tst/");
-
-        assert_eq!(path.to_string(), "tst/tst/");
-    }
-
-    #[test]
-    fn should_remove_multiple_extra_slashes() {
-        let path = Path::new().join("/tst////").join("///tst/");
-
-        assert_eq!(path.to_string(), "/tst/tst/");
     }
 }
