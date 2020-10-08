@@ -58,8 +58,8 @@
 //! ```
 //! This eliminates the need to introduce variables for partial pieces of your route tree.
 //!
-//! Another problem with Tide routes is that middleware that is only active for certain routes can 
-//! be difficult to maintain. Adding middleware to a tree is easy, and its very clear where the 
+//! Another problem with Tide routes is that middleware that is only active for certain routes can
+//! be difficult to maintain. Adding middleware to a tree is easy, and its very clear where the
 //! middleware is applied and where not; (this is still a prototype and middleware is not actually
 //! added right now)
 //! ```rust
@@ -109,14 +109,21 @@
 pub mod routebuilder;
 pub mod router;
 
-use std::sync::Arc;
 use routebuilder::RouteBuilder;
 use std::collections::HashMap;
+use std::fmt::{Debug, Formatter, Result as FmtResult};
+use std::sync::Arc;
 use tide::http::Method;
 use tide::utils::async_trait;
 use tide::{Endpoint, Middleware};
 
 struct BoxedEndpoint<State>(Box<dyn Endpoint<State>>);
+
+impl<State> Debug for BoxedEndpoint<State> {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
+        formatter.debug_struct("BoxedEndpoint").finish()
+    }
+}
 
 impl<State: Clone + Send + Sync + 'static> BoxedEndpoint<State> {
     /// Wrap an endpoint in a BoxedEndpoint
@@ -144,6 +151,7 @@ pub fn root<State>() -> RouteSegment<State> {
 /// A Builder for Tide routes. RouteBuilders can be composed into a tree that represents the tree of
 /// path segments, middleware and endpoints that defines the routes in a Tide application. This tree
 /// can then be returned as a list of routes to each of the endpoints.
+#[derive(Debug)]
 pub struct RouteSegment<State> {
     route: RouteSegmentKind<State>,
     branches: Vec<RouteSegment<State>>,
@@ -154,6 +162,16 @@ enum RouteSegmentKind<State> {
     Root,
     Path(String),
     Middleware(Box<dyn Middleware<State>>),
+}
+
+impl<State> Debug for RouteSegmentKind<State> {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            RouteSegmentKind::Root => write!(formatter, "RouteSegmentKind::Root"),
+            RouteSegmentKind::Path(path) => write!(formatter, "RouteSegmentKind::Path({})", path),
+            RouteSegmentKind::Middleware(_) => write!(formatter, "RouteSegmentKind::Middleware"),
+        }
+    }
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
@@ -219,6 +237,12 @@ struct EndpointDescriptor<State>(
     BoxedEndpoint<State>,
 );
 
+impl<State> Debug for EndpointDescriptor<State> {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
+        formatter.debug_struct("EndpointDescriptor").finish()
+    }
+}
+
 /// Import types to use tide_fluent_routes
 pub mod prelude {
     pub use super::routebuilder::{RouteBuilder, RouteBuilderExt};
@@ -264,10 +288,7 @@ mod test {
     #[test]
     fn should_build_endpoint_path() {
         let routes: Vec<_> = root::<()>()
-            .at("path", |r| {
-                r.at("subpath", |r|
-                    r.get(|_| async { Ok("") })
-            )})
+            .at("path", |r| r.at("subpath", |r| r.get(|_| async { Ok("") })))
             .build()
             .collect();
 

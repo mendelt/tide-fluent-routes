@@ -3,9 +3,9 @@
 
 use std::sync::Arc;
 
-use crate::{EndpointDescriptor, RouteSegment};
 use crate::routebuilder::RouteBuilder;
-use tide::{Endpoint, Middleware, http::Method};
+use crate::{EndpointDescriptor, RouteSegment};
+use tide::{http::Method, Endpoint, Middleware};
 
 /// A router is any component where routes can be registered on like a tide::Server
 pub trait Router<State: Clone + Send + Sync + 'static> {
@@ -31,7 +31,7 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
         &mut self,
         path: &str,
         method: Option<Method>,
-        _middleware:  &[Arc<dyn Middleware<State>>],
+        _middleware: &[Arc<dyn Middleware<State>>],
         endpoint: impl Endpoint<State>,
     ) {
         // let endpoint = MiddlewareEndpoint::wrap_with_middleware(endpoint, &middleware);
