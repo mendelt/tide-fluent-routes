@@ -7,11 +7,14 @@ impl Path {
     }
 
     pub fn join(self, segment: &str) -> Path {
-        let mut path = self.0.trim_end_matches('/').to_string();
-        path.push('/');
-        path.push_str(segment.trim_start_matches('/'));
-
-        Path(path)
+        if self.0.is_empty() {
+            Path(segment.to_string())
+        } else {
+            let mut path = self.0.trim_end_matches('/').to_string();
+            path.push('/');
+            path.push_str(segment.trim_start_matches('/'));
+            Path(path)
+        }
     }
 }
 
