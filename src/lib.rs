@@ -106,6 +106,7 @@
     unused_qualifications
 )]
 
+mod path;
 pub mod routebuilder;
 pub mod router;
 
