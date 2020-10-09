@@ -7,13 +7,13 @@ impl Path {
         Path(String::new())
     }
 
-    pub fn join(self, segment: &str) -> Path {
+    pub fn prepend(self, segment: &str) -> Path {
         if self.0.is_empty() {
             Path(segment.to_string())
         } else {
-            let mut path = self.0.trim_end_matches('/').to_string();
+            let mut path = segment.trim_end_matches('/').to_string();
             path.push('/');
-            path.push_str(segment.trim_start_matches('/'));
+            path.push_str(self.0.trim_start_matches('/'));
             Path(path)
         }
     }
@@ -32,25 +32,25 @@ mod test {
     #[test]
     fn should_handle_slashes_between_segments() {
         let path = Path::new()
-            .join("tst")
-            .join("tst")
-            .join("/tst/")
-            .join("tst///")
-            .join("////tst");
+            .prepend("tst")
+            .prepend("tst")
+            .prepend("/tst/")
+            .prepend("tst///")
+            .prepend("////tst");
 
         assert_eq!(path.to_string(), "tst/tst/tst/tst/tst");
     }
 
     #[test]
     fn should_preserve_prefix_slash() {
-        let path = Path::new().join("/tst").join("tst");
+        let path = Path::new().prepend("/tst").prepend("tst");
 
         assert_eq!(path.to_string(), "/tst/tst");
     }
 
     #[test]
     fn should_preserve_trailing_slash() {
-        let path = Path::new().join("tst").join("tst/");
+        let path = Path::new().prepend("tst").prepend("tst/");
 
         assert_eq!(path.to_string(), "tst/tst/");
     }
