@@ -110,6 +110,7 @@ mod path;
 pub mod routebuilder;
 pub mod router;
 
+use crate::path::Path;
 use routebuilder::RouteBuilder;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
@@ -162,7 +163,23 @@ pub struct RouteSegment<State> {
 enum RouteSegmentKind<State> {
     Root,
     Path(String),
-    Middleware(Box<dyn Middleware<State>>),
+    Middleware(Arc<dyn Middleware<State>>),
+}
+
+impl<State> RouteSegmentKind<State> {
+    /// Apply the path or middleware in to the endpoint
+    fn apply_to(&self, endpoint: EndpointDescriptor<State>) -> EndpointDescriptor<State> {
+        let EndpointDescriptor(path, method, mut middleware, endpoint) = endpoint;
+
+        match self {
+            RouteSegmentKind::Root => EndpointDescriptor(path, method, middleware, endpoint),
+            RouteSegmentKind::Path(segment) => EndpointDescriptor(path.prepend(segment), method, middleware, endpoint),
+            RouteSegmentKind::Middleware(ware) => {
+                middleware.push(ware.clone());
+                EndpointDescriptor(path, method, middleware, endpoint)
+            }
+        }
+    }
 }
 
 impl<State> Debug for RouteSegmentKind<State> {
@@ -186,12 +203,13 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
         self
     }
 
-    fn build(self) -> impl Iterator<Item = EndpointDescriptor<State>> {
+    fn build(self) -> Vec<EndpointDescriptor<State>> { 
+
         let local_endpoints: Vec<EndpointDescriptor<State>> = self
             .endpoints
             .into_iter()
             .map(|(method, endpoint)| {
-                EndpointDescriptor(String::new(), method, Vec::new(), endpoint)
+                EndpointDescriptor(Path::new(), method, Vec::new(), endpoint)
             })
             .collect();
 
@@ -201,7 +219,12 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
             .flat_map(RouteSegment::build)
             .collect();
 
-        local_endpoints.into_iter().chain(sub_endpoints.into_iter())
+
+        let route = self.route;
+        local_endpoints.into_iter()
+            .chain(sub_endpoints.into_iter())
+            .map(|descriptor| route.apply_to(descriptor))
+            .collect()
     }
 }
 
@@ -225,14 +248,14 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
 
     /// Add sub-routes for a middleware
     fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
-        self.add_branch(RouteSegmentKind::Middleware(Box::new(middleware)), routes)
+        self.add_branch(RouteSegmentKind::Middleware(Arc::new(middleware)), routes)
     }
 }
 
 /// Describes all information for registering an endpoint, the path to it, its middleware
 /// and its HttpMethod
-struct EndpointDescriptor<State>(
-    String,
+pub(crate) struct EndpointDescriptor<State>(
+    Path,
     Option<Method>,
     Vec<Arc<dyn Middleware<State>>>,
     BoxedEndpoint<State>,
@@ -255,10 +278,11 @@ pub mod prelude {
 #[cfg(test)]
 mod test {
     use super::prelude::*;
+    use super::Path;
 
     #[test]
     fn should_build_single_endpoint() {
-        let routes: Vec<_> = root::<()>().get(|_| async { Ok("") }).build().collect();
+        let routes: Vec<_> = root::<()>().get(|_| async { Ok("") }).build();
 
         assert_eq!(routes.len(), 1);
     }
@@ -268,8 +292,7 @@ mod test {
         let routes: Vec<_> = root::<()>()
             .get(|_| async { Ok("") })
             .post(|_| async { Ok("") })
-            .build()
-            .collect();
+            .build();
 
         assert_eq!(routes.len(), 2);
     }
@@ -280,8 +303,7 @@ mod test {
             .at("sub_path", |r| {
                 r.get(|_| async { Ok("") }).post(|_| async { Ok("") })
             })
-            .build()
-            .collect();
+            .build();
 
         assert_eq!(routes.len(), 2);
     }
@@ -290,11 +312,10 @@ mod test {
     fn should_build_endpoint_path() {
         let routes: Vec<_> = root::<()>()
             .at("path", |r| r.at("subpath", |r| r.get(|_| async { Ok("") })))
-            .build()
-            .collect();
+            .build();
 
         assert_eq!(routes.len(), 1);
         assert_eq!(routes.get(0).unwrap().1, Some(Method::Get));
-        assert_eq!(routes.get(0).unwrap().0, "path/subpath".to_string());
+        assert_eq!(routes.get(0).unwrap().0.to_string(), "path/subpath".to_string());
     }
 }
