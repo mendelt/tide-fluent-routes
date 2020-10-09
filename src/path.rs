@@ -1,4 +1,5 @@
 /// Newtype for collecting path segments into a path
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Path(String);
 
 impl Path {
