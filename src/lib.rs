@@ -204,7 +204,6 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     }
 
     fn build(self) -> Vec<EndpointDescriptor<State>> { 
-
         let local_endpoints: Vec<EndpointDescriptor<State>> = self
             .endpoints
             .into_iter()
@@ -278,7 +277,6 @@ pub mod prelude {
 #[cfg(test)]
 mod test {
     use super::prelude::*;
-    use super::Path;
 
     #[test]
     fn should_build_single_endpoint() {

@@ -3,11 +3,11 @@
 pub(crate) struct Path(String);
 
 impl Path {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Path(String::new())
     }
 
-    pub fn prepend(self, segment: &str) -> Path {
+    pub(crate) fn prepend(self, segment: &str) -> Path {
         if self.0.is_empty() {
             Path(segment.to_string())
         } else {

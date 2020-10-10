@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use crate::routebuilder::RouteBuilder;
 use crate::{EndpointDescriptor, RouteSegment};
 use tide::{http::Method, Endpoint, Middleware};
 
@@ -19,7 +18,7 @@ pub trait Router<State: Clone + Send + Sync + 'static> {
     );
 
     /// Register all routes from a RouteBuilder on the `Router`
-    fn register<T: RouteBuilder<State>>(&mut self, builder: RouteSegment<State>) {
+    fn register(&mut self, builder: RouteSegment<State>) {
         for EndpointDescriptor(path, method, middleware, endpoint) in builder.build() {
             self.register_endpoint(&path.to_string(), method, &middleware, endpoint)
         }
