@@ -9,7 +9,7 @@ description = "Tide fluent routes is a library that implements a fluent routing 
 repository = "https://github.com/mendelt/tide-fluent-routes"
 categories = ["network-programming", "web-programming::http-server"]
 keywords = ["tide", "http", "web", "routing"]
-readme = "../README.md"
+readme = "README.md"
 
 [dependencies]
 tide = "0.13.0"

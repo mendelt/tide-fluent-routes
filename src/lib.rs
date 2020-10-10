@@ -173,7 +173,9 @@ impl<State> RouteSegmentKind<State> {
 
         match self {
             RouteSegmentKind::Root => EndpointDescriptor(path, method, middleware, endpoint),
-            RouteSegmentKind::Path(segment) => EndpointDescriptor(path.prepend(segment), method, middleware, endpoint),
+            RouteSegmentKind::Path(segment) => {
+                EndpointDescriptor(path.prepend(segment), method, middleware, endpoint)
+            }
             RouteSegmentKind::Middleware(ware) => {
                 middleware.push(ware.clone());
                 EndpointDescriptor(path, method, middleware, endpoint)
@@ -203,13 +205,11 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
         self
     }
 
-    fn build(self) -> Vec<EndpointDescriptor<State>> { 
+    fn build(self) -> Vec<EndpointDescriptor<State>> {
         let local_endpoints: Vec<EndpointDescriptor<State>> = self
             .endpoints
             .into_iter()
-            .map(|(method, endpoint)| {
-                EndpointDescriptor(Path::new(), method, Vec::new(), endpoint)
-            })
+            .map(|(method, endpoint)| EndpointDescriptor(Path::new(), method, Vec::new(), endpoint))
             .collect();
 
         let sub_endpoints: Vec<EndpointDescriptor<State>> = self
@@ -218,9 +218,9 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
             .flat_map(RouteSegment::build)
             .collect();
 
-
         let route = self.route;
-        local_endpoints.into_iter()
+        local_endpoints
+            .into_iter()
             .chain(sub_endpoints.into_iter())
             .map(|descriptor| route.apply_to(descriptor))
             .collect()
@@ -314,6 +314,9 @@ mod test {
 
         assert_eq!(routes.len(), 1);
         assert_eq!(routes.get(0).unwrap().1, Some(Method::Get));
-        assert_eq!(routes.get(0).unwrap().0.to_string(), "path/subpath".to_string());
+        assert_eq!(
+            routes.get(0).unwrap().0.to_string(),
+            "path/subpath".to_string()
+        );
     }
 }
