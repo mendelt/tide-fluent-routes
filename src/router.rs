@@ -1,10 +1,8 @@
 //! The router trait and its implementation on tide::Server connect the RouteBuilder to tide and
 //! allows you to call register on a tide::Server with a fluent route tree
 
-use std::sync::Arc;
-
-use crate::{EndpointDescriptor, RouteSegment};
-use tide::{http::Method, Endpoint, Middleware};
+use crate::{util::ArcMiddleware, EndpointDescriptor, RouteSegment};
+use tide::{http::Method, Endpoint};
 
 /// A router is any component where routes can be registered on like a tide::Server
 pub trait Router<State: Clone + Send + Sync + 'static> {
@@ -13,7 +11,7 @@ pub trait Router<State: Clone + Send + Sync + 'static> {
         &mut self,
         path: &str,
         method: Option<Method>,
-        middleware: &[Arc<dyn Middleware<State>>],
+        middleware: &[ArcMiddleware<State>],
         endpoint: impl Endpoint<State>,
     );
 
@@ -30,7 +28,7 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
         &mut self,
         path: &str,
         method: Option<Method>,
-        _middleware: &[Arc<dyn Middleware<State>>],
+        _middleware: &[ArcMiddleware<State>],
         endpoint: impl Endpoint<State>,
     ) {
         // let endpoint = MiddlewareEndpoint::wrap_with_middleware(endpoint, &middleware);

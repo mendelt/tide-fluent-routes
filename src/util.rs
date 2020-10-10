@@ -29,7 +29,8 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for BoxedEndpoint<Sta
 }
 
 /// Implement some useful stuff around Arc<dyn Middleware>
-pub(crate) struct ArcMiddleware<State>(Arc<dyn Middleware<State>>);
+#[derive(Clone)]
+pub struct ArcMiddleware<State>(Arc<dyn Middleware<State>>);
 
 impl<State: Clone + Send + Sync + 'static> ArcMiddleware<State> {
     /// Wrap an endpoint in a BoxedEndpoint

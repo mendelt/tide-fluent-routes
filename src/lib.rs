@@ -108,11 +108,10 @@ pub mod router;
 mod util;
 
 use crate::path::Path;
-use crate::util::BoxedEndpoint;
+use crate::util::{ArcMiddleware, BoxedEndpoint};
 use routebuilder::RouteBuilder;
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter, Result as FmtResult};
-use std::sync::Arc;
+// use std::fmt::{Debug, Formatter, Result as FmtResult};
 use tide::http::Method;
 use tide::{Endpoint, Middleware};
 
@@ -135,36 +134,27 @@ pub struct RouteSegment<State> {
     endpoints: HashMap<Option<Method>, BoxedEndpoint<State>>,
 }
 
+#[derive(Debug, Clone)]
 enum RouteSegmentKind<State> {
     Root,
     Path(String),
-    Middleware(Arc<dyn Middleware<State>>),
+    Middleware(ArcMiddleware<State>),
 }
 
 impl<State> RouteSegmentKind<State> {
     /// Apply the path or middleware in to the endpoint
-    fn apply_to(&self, endpoint: EndpointDescriptor<State>) -> EndpointDescriptor<State> {
+    fn apply_to(self, endpoint: EndpointDescriptor<State>) -> EndpointDescriptor<State> {
         let EndpointDescriptor(path, method, mut middleware, endpoint) = endpoint;
 
         match self {
             RouteSegmentKind::Root => EndpointDescriptor(path, method, middleware, endpoint),
             RouteSegmentKind::Path(segment) => {
-                EndpointDescriptor(path.prepend(segment), method, middleware, endpoint)
+                EndpointDescriptor(path.prepend(&segment), method, middleware, endpoint)
             }
             RouteSegmentKind::Middleware(ware) => {
-                middleware.push(ware.clone());
+                middleware.push(ware);
                 EndpointDescriptor(path, method, middleware, endpoint)
             }
-        }
-    }
-}
-
-impl<State> Debug for RouteSegmentKind<State> {
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
-        match self {
-            RouteSegmentKind::Root => write!(formatter, "RouteSegmentKind::Root"),
-            RouteSegmentKind::Path(path) => write!(formatter, "RouteSegmentKind::Path({})", path),
-            RouteSegmentKind::Middleware(_) => write!(formatter, "RouteSegmentKind::Middleware"),
         }
     }
 }
@@ -197,7 +187,7 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
         local_endpoints
             .into_iter()
             .chain(sub_endpoints.into_iter())
-            .map(|descriptor| route.apply_to(descriptor))
+            .map(|descriptor| route.clone().apply_to(descriptor))
             .collect()
     }
 }
@@ -222,24 +212,22 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
 
     /// Add sub-routes for a middleware
     fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
-        self.add_branch(RouteSegmentKind::Middleware(Arc::new(middleware)), routes)
+        self.add_branch(
+            RouteSegmentKind::Middleware(ArcMiddleware::new(middleware)),
+            routes,
+        )
     }
 }
 
 /// Describes all information for registering an endpoint, the path to it, its middleware
 /// and its HttpMethod
+#[derive(Debug)]
 pub(crate) struct EndpointDescriptor<State>(
     Path,
     Option<Method>,
-    Vec<Arc<dyn Middleware<State>>>,
+    Vec<ArcMiddleware<State>>,
     BoxedEndpoint<State>,
 );
-
-impl<State> Debug for EndpointDescriptor<State> {
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
-        formatter.debug_struct("EndpointDescriptor").finish()
-    }
-}
 
 /// Import types to use tide_fluent_routes
 pub mod prelude {
