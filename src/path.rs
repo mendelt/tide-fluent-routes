@@ -32,25 +32,25 @@ mod test {
     #[test]
     fn should_handle_slashes_between_segments() {
         let path = Path::new()
-            .prepend("tst")
-            .prepend("tst")
-            .prepend("/tst/")
-            .prepend("tst///")
-            .prepend("////tst");
+            .prepend("tst1/")
+            .prepend("tst2")
+            .prepend("/tst3/")
+            .prepend("//tst4///")
+            .prepend("/tst5//");
 
-        assert_eq!(path.to_string(), "tst/tst/tst/tst/tst");
+        assert_eq!(path.to_string(), "/tst5/tst4/tst3/tst2/tst1/");
     }
 
     #[test]
     fn should_preserve_prefix_slash() {
-        let path = Path::new().prepend("/tst").prepend("tst");
+        let path = Path::new().prepend("tst").prepend("/tst");
 
         assert_eq!(path.to_string(), "/tst/tst");
     }
 
     #[test]
     fn should_preserve_trailing_slash() {
-        let path = Path::new().prepend("tst").prepend("tst/");
+        let path = Path::new().prepend("tst/").prepend("tst");
 
         assert_eq!(path.to_string(), "tst/tst/");
     }
