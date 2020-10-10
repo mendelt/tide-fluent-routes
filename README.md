@@ -35,16 +35,14 @@ server.register(
     root()
         .get(endpoint)
         .post(endpoint)
-        .at("api/v1", |route| {
-            route
-                .get(endpoint)
-                .post(endpoint)
-        })
-        .at("api/v2", |route| {
-            route
-                .get(endpoint)
-                .post(endpoint)
-        }),
+        .at("api/v1", |route| route
+            .get(endpoint)
+            .post(endpoint)
+        )
+        .at("api/v2", |route| route
+            .get(endpoint)
+            .post(endpoint)
+        ),
 );
 ```
 This eliminates the need to introduce variables for partial pieces of your route tree.
@@ -58,18 +56,16 @@ server.register(
     root()
         .get(endpoint)
         .post(endpoint)
-        .at("api/v1", |route| {
-            route
-                .with(dummy_middleware, |route| {
-                    route.get(endpoint)
-                })
-               .post(endpoint)
-        })
-        .at("api/v2", |route| {
-            route
+        .at("api/v1", |route| route
+            .with(dummy_middleware, |route| route
                 .get(endpoint)
-                .get(endpoint)
-        }),
+            )
+            .post(endpoint)
+        )
+        .at("api/v2", |route| route
+            .get(endpoint)
+            .get(endpoint)
+        ),
 );
 ```
 
