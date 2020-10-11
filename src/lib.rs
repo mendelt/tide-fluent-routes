@@ -35,7 +35,7 @@
 //! ```rust
 //! # use tide::{Request, Result};
 //! # use tide_fluent_routes::prelude::*;
-//! # pub async fn endpoint(_: Request<()>) -> Result {
+//! # async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
 //! # }
 //! # let mut server = tide::Server::new();
@@ -64,10 +64,10 @@
 //! # use std::{future::Future, pin::Pin};
 //! # use tide::{Next, Request, Result};
 //! # use tide_fluent_routes::prelude::*;
-//! # pub async fn endpoint(_: Request<()>) -> Result {
+//! # async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
 //! # }
-//! # pub fn dummy_middleware<'a>(
+//! # fn dummy_middleware<'a>(
 //! #     request: Request<()>,
 //! #     next: Next<'a, ()>,
 //! # ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
@@ -240,6 +240,10 @@ pub mod prelude {
 #[cfg(test)]
 mod test {
     use super::prelude::*;
+    use super::ArcMiddleware;
+    use std::future::Future;
+    use std::pin::Pin;
+    use tide::{Next, Request, Result};
 
     #[test]
     fn should_build_single_endpoint() {
@@ -281,5 +285,32 @@ mod test {
             routes.get(0).unwrap().0.to_string(),
             "path/subpath".to_string()
         );
+    }
+
+    fn middleware<'a>(
+        request: Request<()>,
+        next: Next<'a, ()>,
+    ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
+        Box::pin(async { Ok(next.run(request).await) })
+    }
+
+    #[test]
+    fn should_collect_middleware() {
+        let middleware1 = ArcMiddleware::new(middleware);
+        let middleware2 = ArcMiddleware::new(middleware);
+
+        let routes: Vec<_> = root::<()>()
+            .at("path", |r| {
+                r.with(middleware1.clone(), |r| {
+                    r.at("subpath", |r| {
+                        r.with(middleware2.clone(), |r| r.get(|_| async { Ok("") }))
+                    })
+                    .get(|_| async { Ok("") })
+                })
+            })
+            .build();
+
+        assert_eq!(routes.get(0).unwrap().2.len(), 1);
+        assert_eq!(routes.get(1).unwrap().2.len(), 2);
     }
 }
