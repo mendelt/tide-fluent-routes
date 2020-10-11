@@ -28,10 +28,13 @@ impl<State: Clone + Send + Sync + 'static> Router<State> for tide::Server<State>
         &mut self,
         path: &str,
         method: Option<Method>,
-        _middleware: &[ArcMiddleware<State>],
+        middleware: &[ArcMiddleware<State>],
         endpoint: impl Endpoint<State>,
     ) {
-        // let endpoint = MiddlewareEndpoint::wrap_with_middleware(endpoint, &middleware);
+        let mut route = self.at(path);
+        for ware in middleware {
+            route.with(ware.clone());
+        }
 
         // if method is specified then register this method, otherwise register endpoint as a catch_all
         match method {
