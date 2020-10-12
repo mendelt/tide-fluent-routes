@@ -18,6 +18,9 @@ pub trait RouteBuilder<State: Clone + Send + Sync + 'static>: Sized {
 
     /// Add a catchall endpoint
     fn all(self, endpoint: impl Endpoint<State>) -> Self;
+
+    /// Make this a named route
+    fn name(self, name: &str) -> Self;
 }
 
 /// Some extension methods for the routebuilder to make the routing dsl a bit nicer

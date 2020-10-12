@@ -118,6 +118,7 @@ use tide::{Endpoint, Middleware};
 pub fn root<State>() -> RouteSegment<State> {
     RouteSegment {
         route: RouteSegmentKind::Root,
+        name: None,
         branches: Vec::new(),
         endpoints: HashMap::new(),
     }
@@ -129,6 +130,7 @@ pub fn root<State>() -> RouteSegment<State> {
 #[derive(Debug)]
 pub struct RouteSegment<State> {
     route: RouteSegmentKind<State>,
+    name: Option<String>,
     branches: Vec<RouteSegment<State>>,
     endpoints: HashMap<Option<Method>, BoxedEndpoint<State>>,
 }
@@ -138,6 +140,7 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSegmentKind<State>, routes: R) -> Self {
         self.branches.push(routes(RouteSegment {
             route: spec,
+            name: None,
             branches: Vec::new(),
             endpoints: HashMap::new(),
         }));
@@ -186,6 +189,14 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
 
     fn all(mut self, endpoint: impl Endpoint<State>) -> Self {
         self.endpoints.insert(None, BoxedEndpoint::new(endpoint));
+        self
+    }
+
+    fn name(mut self, name: &str) -> Self {
+        if self.name.is_some() {
+            panic!("route already has a name");
+        }
+        self.name = Some(name.to_string());
         self
     }
 }
