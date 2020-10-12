@@ -168,7 +168,17 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<State> {
-    /// Add an endpoint
+    fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
+        self.add_branch(RouteSegmentKind::Path(path.to_string()), routes)
+    }
+
+    fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
+        self.add_branch(
+            RouteSegmentKind::Middleware(ArcMiddleware::new(middleware)),
+            routes,
+        )
+    }
+
     fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
         self.endpoints
             .insert(Some(method), BoxedEndpoint::new(endpoint));
@@ -178,19 +188,6 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
     fn all(mut self, endpoint: impl Endpoint<State>) -> Self {
         self.endpoints.insert(None, BoxedEndpoint::new(endpoint));
         self
-    }
-
-    /// Add sub-routes for a path segment
-    fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
-        self.add_branch(RouteSegmentKind::Path(path.to_string()), routes)
-    }
-
-    /// Add sub-routes for a middleware
-    fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
-        self.add_branch(
-            RouteSegmentKind::Middleware(ArcMiddleware::new(middleware)),
-            routes,
-        )
     }
 }
 
