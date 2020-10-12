@@ -24,8 +24,7 @@
 //! server.register(
 //!    root()
 //!        .get(endpoint)
-//!        .post(endpoint),
-//! );
+//!        .post(endpoint));
 //! ```
 //! Fluent Routes follows conventions from Tide. All HTTP verbs are supported the same way. Paths
 //! can be extended using `at` but this method takes a router closure that allows building the route
@@ -50,11 +49,48 @@
 //!         .at("api/v2", |route| route
 //!             .get(endpoint)
 //!             .post(endpoint)
-//!         ),
+//!         )
 //! );
 //! ```
 //! This eliminates the need to introduce variables for partial pieces of your route tree.
 //!
+//! Including routes defined in other functions also looks very natural, this makes it easy
+//! to compose large route trees
+//! ```rust
+//! # use tide::{Request, Result};
+//! # use tide_fluent_routes::prelude::*;
+//! # async fn endpoint(_: Request<()>) -> Result {
+//! #     todo!()
+//! # }
+//! # let mut server = tide::Server::new();
+//!
+//! fn v1_routes(routes: RouteSegment<()>) -> RouteSegment<()> {
+//!     routes
+//!         .at("articles", |route| route
+//!             .get(endpoint)
+//!             .post(endpoint)
+//!             .at(":id", |route| route
+//!                 .get(endpoint)
+//!                 .put(endpoint)
+//!                 .delete(endpoint)
+//!             )
+//!         )
+//! }
+//! 
+//! fn v2_routes(routes: RouteSegment<()>) -> RouteSegment<()> {
+//!     routes
+//!         .at("articles", |route| route
+//!             .get(endpoint))
+//! }
+//! 
+//! server.register(
+//!     root()
+//!         .get(endpoint)
+//!         .post(endpoint)
+//!         .at("api/v1", v1_routes)
+//!         .at("api/v2", v2_routes));
+//! ```
+//! 
 //! Another problem with Tide routes is that middleware that is only active for certain routes can
 //! be difficult to maintain. Adding middleware to a tree is easy, and its very clear where the
 //! middleware is applied and where not; (this is still a prototype and middleware is not actually
