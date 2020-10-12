@@ -134,31 +134,6 @@ pub struct RouteSegment<State> {
     endpoints: HashMap<Option<Method>, BoxedEndpoint<State>>,
 }
 
-#[derive(Debug, Clone)]
-enum RouteSegmentKind<State> {
-    Root,
-    Path(String),
-    Middleware(ArcMiddleware<State>),
-}
-
-impl<State> RouteSegmentKind<State> {
-    /// Apply the path or middleware in to the endpoint
-    fn apply_to(self, endpoint: EndpointDescriptor<State>) -> EndpointDescriptor<State> {
-        let EndpointDescriptor(path, method, mut middleware, endpoint) = endpoint;
-
-        match self {
-            RouteSegmentKind::Root => EndpointDescriptor(path, method, middleware, endpoint),
-            RouteSegmentKind::Path(segment) => {
-                EndpointDescriptor(path.prepend(&segment), method, middleware, endpoint)
-            }
-            RouteSegmentKind::Middleware(ware) => {
-                middleware.push(ware);
-                EndpointDescriptor(path, method, middleware, endpoint)
-            }
-        }
-    }
-}
-
 impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     /// Add a branch, helper method for at and with methods
     fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSegmentKind<State>, routes: R) -> Self {
@@ -216,6 +191,31 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
             RouteSegmentKind::Middleware(ArcMiddleware::new(middleware)),
             routes,
         )
+    }
+}
+
+#[derive(Debug, Clone)]
+enum RouteSegmentKind<State> {
+    Root,
+    Path(String),
+    Middleware(ArcMiddleware<State>),
+}
+
+impl<State> RouteSegmentKind<State> {
+    /// Apply the path or middleware in to the endpoint
+    fn apply_to(self, endpoint: EndpointDescriptor<State>) -> EndpointDescriptor<State> {
+        let EndpointDescriptor(path, method, mut middleware, endpoint) = endpoint;
+
+        match self {
+            RouteSegmentKind::Root => EndpointDescriptor(path, method, middleware, endpoint),
+            RouteSegmentKind::Path(segment) => {
+                EndpointDescriptor(path.prepend(&segment), method, middleware, endpoint)
+            }
+            RouteSegmentKind::Middleware(ware) => {
+                middleware.push(ware);
+                EndpointDescriptor(path, method, middleware, endpoint)
+            }
+        }
     }
 }
 
