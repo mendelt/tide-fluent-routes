@@ -111,7 +111,6 @@ use crate::path::Path;
 use crate::util::{ArcMiddleware, BoxedEndpoint};
 use routebuilder::RouteBuilder;
 use std::collections::HashMap;
-// use std::fmt::{Debug, Formatter, Result as FmtResult};
 use tide::http::Method;
 use tide::{Endpoint, Middleware};
 
