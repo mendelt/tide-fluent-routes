@@ -193,8 +193,8 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
     }
 
     fn name(mut self, name: &str) -> Self {
-        if self.name.is_some() {
-            panic!("route already has a name");
+        if let Some(name) = self.name {
+            panic!("route already has name: {}", name);
         }
         self.name = Some(name.to_string());
         self
