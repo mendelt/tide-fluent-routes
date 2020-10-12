@@ -14,11 +14,10 @@
 //! You can register simple endpoints like this;
 //! ```rust
 //! # use tide::{Request, Result};
-//! # use tide_fluent_routes::prelude::*;
 //! # pub async fn endpoint(_: Request<()>) -> Result {
 //! #     todo!()
 //! # }
-//! use tide_fluent_routes::*;
+//! use tide_fluent_routes::prelude::*;
 //!
 //! let mut server = tide::Server::new();
 //!
