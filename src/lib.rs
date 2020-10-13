@@ -76,13 +76,13 @@
 //!             )
 //!         )
 //! }
-//! 
+//!
 //! fn v2_routes(routes: RouteSegment<()>) -> RouteSegment<()> {
 //!     routes
 //!         .at("articles", |route| route
 //!             .get(endpoint))
 //! }
-//! 
+//!
 //! server.register(
 //!     root()
 //!         .get(endpoint)
@@ -90,7 +90,7 @@
 //!         .at("api/v1", v1_routes)
 //!         .at("api/v2", v2_routes));
 //! ```
-//! 
+//!
 //! Another problem with Tide routes is that middleware that is only active for certain routes can
 //! be difficult to maintain. Adding middleware to a tree is easy, and its very clear where the
 //! middleware is applied and where not; (this is still a prototype and middleware is not actually
@@ -186,7 +186,12 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
         let local_endpoints: Vec<EndpointDescriptor<State>> = self
             .endpoints
             .into_iter()
-            .map(|(method, endpoint)| EndpointDescriptor(Path::new(), method, Vec::new(), endpoint))
+            .map(|(method, endpoint)| EndpointDescriptor {
+                path: Path::new(),
+                method,
+                middleware: Vec::new(),
+                endpoint,
+            })
             .collect();
 
         let sub_endpoints: Vec<EndpointDescriptor<State>> = self
@@ -246,16 +251,21 @@ enum RouteSegmentKind<State> {
 impl<State> RouteSegmentKind<State> {
     /// Apply the path or middleware in to the endpoint
     fn apply_to(self, endpoint: EndpointDescriptor<State>) -> EndpointDescriptor<State> {
-        let EndpointDescriptor(path, method, mut middleware, endpoint) = endpoint;
+        // let EndpointDescriptor{path, method, mut middleware, endpoint} = endpoint;
 
         match self {
-            RouteSegmentKind::Root => EndpointDescriptor(path, method, middleware, endpoint),
-            RouteSegmentKind::Path(segment) => {
-                EndpointDescriptor(path.prepend(&segment), method, middleware, endpoint)
-            }
+            RouteSegmentKind::Root => endpoint,
+            RouteSegmentKind::Path(segment) => EndpointDescriptor {
+                path: endpoint.path.prepend(&segment),
+                ..endpoint
+            },
             RouteSegmentKind::Middleware(ware) => {
+                let mut middleware = endpoint.middleware;
                 middleware.push(ware);
-                EndpointDescriptor(path, method, middleware, endpoint)
+                EndpointDescriptor {
+                    middleware: middleware,
+                    ..endpoint
+                }
             }
         }
     }
@@ -264,12 +274,12 @@ impl<State> RouteSegmentKind<State> {
 /// Describes all information for registering an endpoint, the path to it, its middleware
 /// and its HttpMethod
 #[derive(Debug)]
-pub(crate) struct EndpointDescriptor<State>(
-    Path,
-    Option<Method>,
-    Vec<ArcMiddleware<State>>,
-    BoxedEndpoint<State>,
-);
+pub(crate) struct EndpointDescriptor<State> {
+    path: Path,
+    method: Option<Method>,
+    middleware: Vec<ArcMiddleware<State>>,
+    endpoint: BoxedEndpoint<State>,
+}
 
 /// Import types to use tide_fluent_routes
 pub mod prelude {
@@ -322,9 +332,9 @@ mod test {
             .build();
 
         assert_eq!(routes.len(), 1);
-        assert_eq!(routes.get(0).unwrap().1, Some(Method::Get));
+        assert_eq!(routes.get(0).unwrap().method, Some(Method::Get));
         assert_eq!(
-            routes.get(0).unwrap().0.to_string(),
+            routes.get(0).unwrap().path.to_string(),
             "path/subpath".to_string()
         );
     }
@@ -352,7 +362,7 @@ mod test {
             })
             .build();
 
-        assert_eq!(routes.get(0).unwrap().2.len(), 1);
-        assert_eq!(routes.get(1).unwrap().2.len(), 2);
+        assert_eq!(routes.get(0).unwrap().middleware.len(), 1);
+        assert_eq!(routes.get(1).unwrap().middleware.len(), 2);
     }
 }
