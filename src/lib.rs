@@ -183,7 +183,7 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     }
 
     fn build(self) -> Vec<EndpointDescriptor<State>> {
-        let local_endpoints: Vec<EndpointDescriptor<State>> = self
+        let local_endpoints = self
             .endpoints
             .into_iter()
             .map(|(method, endpoint)| EndpointDescriptor {
@@ -191,19 +191,16 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
                 method,
                 middleware: Vec::new(),
                 endpoint,
-            })
-            .collect();
+            });
 
-        let sub_endpoints: Vec<EndpointDescriptor<State>> = self
+        let sub_endpoints = self
             .branches
             .into_iter()
-            .flat_map(RouteSegment::build)
-            .collect();
+            .flat_map(RouteSegment::build);
 
         let route = self.route;
         local_endpoints
-            .into_iter()
-            .chain(sub_endpoints.into_iter())
+            .chain(sub_endpoints)
             .map(|descriptor| route.clone().apply_to(descriptor))
             .collect()
     }
