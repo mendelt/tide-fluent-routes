@@ -183,6 +183,7 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     }
 
     fn build(self) -> Vec<RouteDescriptor<State>> {
+        let warning = true;
         let local_endpoints =
             self.endpoints
                 .into_iter()

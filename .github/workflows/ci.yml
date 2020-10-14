@@ -44,9 +44,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
       - name: set rust options to fail on warnings
-        uses: allenevans/set-env@v1.1.0
-        with:
-          RUSTFLAGS: "-D warnings"
+        run: echo "RUSTFLAGS=-D warnings" >> $GITHUB_ENV
       - uses: actions-rs/cargo@v1
         with:
           command: check
