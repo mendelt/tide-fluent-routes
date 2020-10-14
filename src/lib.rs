@@ -183,22 +183,29 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     }
 
     fn build(self) -> Vec<RouteDescriptor<State>> {
-        let local_endpoints = self
-            .endpoints
-            .into_iter()
-            .map(|(method, endpoint)| RouteDescriptor {
+        let local_endpoints =
+            self.endpoints
+                .into_iter()
+                .map(|(method, endpoint)| RouteDescriptor {
+                    path: Path::new(),
+                    middleware: Vec::new(),
+                    route: Route::Handler(method, endpoint),
+                });
+
+        let local_name = self
+            .name
+            .map(|name| RouteDescriptor {
                 path: Path::new(),
                 middleware: Vec::new(),
-                route: Route::Handler(method, endpoint),
-            });
+                route: Route::Name(name),
+            })
+            .into_iter();
 
-        let sub_endpoints = self
-            .branches
-            .into_iter()
-            .flat_map(RouteSegment::build);
+        let sub_endpoints = self.branches.into_iter().flat_map(RouteSegment::build);
 
         let route = self.route;
         local_endpoints
+            .chain(local_name)
             .chain(sub_endpoints)
             .map(|descriptor| route.clone().apply_to(descriptor))
             .collect()
@@ -278,8 +285,8 @@ pub(crate) struct RouteDescriptor<State> {
 /// Descibes a leaf in the route tree, either a name or a handler
 #[derive(Debug)]
 pub(crate) enum Route<State> {
-    _Name(String),
-    Handler(Option<Method>, BoxedEndpoint<State>)
+    Name(String),
+    Handler(Option<Method>, BoxedEndpoint<State>),
 }
 
 /// Import types to use tide_fluent_routes
