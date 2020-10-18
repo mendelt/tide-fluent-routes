@@ -12,4 +12,4 @@ keywords = ["tide", "http", "web", "routing"]
 readme = "README.md"
 
 [dependencies]
-tide = "0.13.0"
+tide = "0.14.0"
