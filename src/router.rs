@@ -16,7 +16,7 @@ pub trait Router<State: Clone + Send + Sync + 'static> {
     );
 
     /// Register all routes from a RouteBuilder on the `Router`
-    fn register(&mut self, builder: RouteSegment<State>) {
+    fn register(&mut self, builder: RouteSegment<State>) -> &mut Self {
         for RouteDescriptor {
             path,
             middleware,
@@ -26,7 +26,9 @@ pub trait Router<State: Clone + Send + Sync + 'static> {
             if let Route::Handler(method, endpoint) = route {
                 self.register_endpoint(&path.to_string(), method, &middleware, endpoint)
             }
-        }
+        };
+
+        self
     }
 }
 
