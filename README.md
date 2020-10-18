@@ -15,15 +15,14 @@ RouteBuilder.
 A RouteBuilder can be initialized using the `route()` method.
 You can register simple endpoints like this;
 ```rust
-use tide_fluent_routes::*;
+use tide_fluent_routes::prelude::*;
 
 let mut server = tide::Server::new();
 
 server.register(
    root()
        .get(endpoint)
-       .post(endpoint),
-);
+       .post(endpoint));
 ```
 Fluent Routes follows conventions from Tide. All HTTP verbs are supported the same way. Paths
 can be extended using `at` but this method takes a router closure that allows building the route
@@ -42,10 +41,41 @@ server.register(
         .at("api/v2", |route| route
             .get(endpoint)
             .post(endpoint)
-        ),
+        )
 );
 ```
 This eliminates the need to introduce variables for partial pieces of your route tree.
+
+Including routes defined in other functions also looks very natural, this makes it easy
+to compose large route trees
+```rust
+
+fn v1_routes(routes: RouteSegment<()>) -> RouteSegment<()> {
+    routes
+        .at("articles", |route| route
+            .get(endpoint)
+            .post(endpoint)
+            .at(":id", |route| route
+                .get(endpoint)
+                .put(endpoint)
+                .delete(endpoint)
+            )
+        )
+}
+
+fn v2_routes(routes: RouteSegment<()>) -> RouteSegment<()> {
+    routes
+        .at("articles", |route| route
+            .get(endpoint))
+}
+
+server.register(
+    root()
+        .get(endpoint)
+        .post(endpoint)
+        .at("api/v1", v1_routes)
+        .at("api/v2", v2_routes));
+```
 
 Another problem with Tide routes is that middleware that is only active for certain routes can
 be difficult to maintain. Adding middleware to a tree is easy, and its very clear where the
@@ -69,7 +99,7 @@ server.register(
 );
 ```
 
-*version: 0.1.0*
+*version: 0.1.2*
 ## License
 
 Licensed under either of
