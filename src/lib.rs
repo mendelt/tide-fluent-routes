@@ -137,6 +137,7 @@
     unused_qualifications
 )]
 
+pub mod fs;
 mod path;
 pub mod routebuilder;
 pub mod router;
