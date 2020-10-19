@@ -27,3 +27,10 @@ pub trait ServeFile<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
         todo!()
     }
 }
+
+impl<State: Clone + Send + Sync + 'static, R: RouteBuilder<State>> ServeFile<State> for R {}
+
+/// Endpoint method for serving files, path is the path to the file to serve
+fn _serve_file_endpoint<State>(_path: &str, _req: Request<State>) -> Result<State> {
+    todo!()
+}
