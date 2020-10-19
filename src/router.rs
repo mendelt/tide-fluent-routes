@@ -26,7 +26,7 @@ pub trait Router<State: Clone + Send + Sync + 'static> {
             if let Route::Handler(method, endpoint) = route {
                 self.register_endpoint(&path.to_string(), method, &middleware, endpoint)
             }
-        };
+        }
 
         self
     }

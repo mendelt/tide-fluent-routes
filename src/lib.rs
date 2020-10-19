@@ -152,7 +152,8 @@ use tide::{Endpoint, Middleware};
 /// Start building a route. Returns a RouteBuilder for the root of your route
 pub fn root<State>() -> RouteSegment<State> {
     RouteSegment {
-        route: RouteSegmentKind::Root,
+        path: Path::new(),
+        middleware: Vec::new(),
         name: None,
         branches: Vec::new(),
         endpoints: HashMap::new(),
@@ -164,17 +165,51 @@ pub fn root<State>() -> RouteSegment<State> {
 /// can then be returned as a list of routes to each of the endpoints.
 #[derive(Debug)]
 pub struct RouteSegment<State> {
-    route: RouteSegmentKind<State>,
+    path: Path,
+    middleware: Vec<ArcMiddleware<State>>,
+
     name: Option<String>,
     branches: Vec<RouteSegment<State>>,
     endpoints: HashMap<Option<Method>, BoxedEndpoint<State>>,
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
-    /// Add a branch, helper method for at and with methods
-    fn add_branch<R: Fn(Self) -> Self>(mut self, spec: RouteSegmentKind<State>, routes: R) -> Self {
+    fn build(self) -> Vec<RouteDescriptor<State>> {
+        let path = self.path;
+        let middleware = self.middleware;
+
+        let local_endpoints =
+            self.endpoints
+                .into_iter()
+                .map(|(method, endpoint)| RouteDescriptor {
+                    path: path.clone(),
+                    middleware: middleware.clone(),
+                    route: Route::Handler(method, endpoint),
+                });
+
+        let local_name = self
+            .name
+            .map(|name| RouteDescriptor {
+                path: path.clone(),
+                middleware: Vec::new(), // We don't care about middleware for named routes for now
+                route: Route::Name(name),
+            })
+            .into_iter();
+
+        let sub_endpoints = self.branches.into_iter().flat_map(RouteSegment::build);
+
+        local_endpoints
+            .chain(local_name)
+            .chain(sub_endpoints)
+            .collect()
+    }
+}
+
+impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<State> {
+    fn at<R: Fn(Self) -> Self>(mut self, path: &str, routes: R) -> Self {
         self.branches.push(routes(RouteSegment {
-            route: spec,
+            path: self.path.clone().append(path),
+            middleware: self.middleware.clone(),
             name: None,
             branches: Vec::new(),
             endpoints: HashMap::new(),
@@ -182,46 +217,18 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
         self
     }
 
-    fn build(self) -> Vec<RouteDescriptor<State>> {
-        let local_endpoints =
-            self.endpoints
-                .into_iter()
-                .map(|(method, endpoint)| RouteDescriptor {
-                    path: Path::new(),
-                    middleware: Vec::new(),
-                    route: Route::Handler(method, endpoint),
-                });
+    fn with<M: Middleware<State>, R: Fn(Self) -> Self>(mut self, middleware: M, routes: R) -> Self {
+        let mut ware = self.middleware.clone();
+        ware.push(ArcMiddleware::new(middleware));
 
-        let local_name = self
-            .name
-            .map(|name| RouteDescriptor {
-                path: Path::new(),
-                middleware: Vec::new(),
-                route: Route::Name(name),
-            })
-            .into_iter();
-
-        let sub_endpoints = self.branches.into_iter().flat_map(RouteSegment::build);
-
-        let route = self.route;
-        local_endpoints
-            .chain(local_name)
-            .chain(sub_endpoints)
-            .map(|descriptor| route.clone().apply_to(descriptor))
-            .collect()
-    }
-}
-
-impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<State> {
-    fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self {
-        self.add_branch(RouteSegmentKind::Path(path.to_string()), routes)
-    }
-
-    fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self {
-        self.add_branch(
-            RouteSegmentKind::Middleware(ArcMiddleware::new(middleware)),
-            routes,
-        )
+        self.branches.push(routes(RouteSegment {
+            path: self.path.clone(),
+            middleware: ware,
+            name: None,
+            branches: Vec::new(),
+            endpoints: HashMap::new(),
+        }));
+        self
     }
 
     fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
@@ -241,36 +248,6 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
         }
         self.name = Some(name.to_string());
         self
-    }
-}
-
-#[derive(Debug, Clone)]
-enum RouteSegmentKind<State> {
-    Root,
-    Path(String),
-    Middleware(ArcMiddleware<State>),
-}
-
-impl<State> RouteSegmentKind<State> {
-    /// Apply the path or middleware in to the endpoint
-    fn apply_to(self, endpoint: RouteDescriptor<State>) -> RouteDescriptor<State> {
-        // let EndpointDescriptor{path, method, mut middleware, endpoint} = endpoint;
-
-        match self {
-            RouteSegmentKind::Root => endpoint,
-            RouteSegmentKind::Path(segment) => RouteDescriptor {
-                path: endpoint.path.prepend(&segment),
-                ..endpoint
-            },
-            RouteSegmentKind::Middleware(ware) => {
-                let mut middleware = endpoint.middleware;
-                middleware.push(ware);
-                RouteDescriptor {
-                    middleware: middleware,
-                    ..endpoint
-                }
-            }
-        }
     }
 }
 
