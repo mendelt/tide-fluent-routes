@@ -1,5 +1,7 @@
 //! Extension traits and endpoints for serving content from the file system
 
+use tide::{Endpoint, utils::async_trait};
+use core::cell::RefCell;
 use tide::Response;
 use tide::Body;
 use std::ffi::OsStr;
@@ -14,73 +16,88 @@ use log;
 pub trait ServeDir<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
     /// Serve a directory at a location
     fn serve_dir(self, dir: impl AsRef<Path>) -> io::Result<Self> {
-        let dir = dir.as_ref().to_owned().canonicalize()?;
+        let dir_path = dir.as_ref().to_owned().canonicalize()?;
 
-        Ok(self.at("*path", |route| route.get( move |req| async { serve_dir_endpoint("*path", dir.clone(), req).await})))
+        Ok(self.at("*path", |route| {
+            route.get( ServeDirEndpoint{dir_path, prefix: "*path".to_string()})
+        }))
     }
 }
 
 impl<State: Clone + Send + Sync + 'static, R: RouteBuilder<State>> ServeDir<State> for R {}
 
-/// Endpoint method for serving directories, prefix is the name of the prefix parameter, path is the path to serve
-async fn serve_dir_endpoint<State>(prefix: &str, dir_path: PathBuf, req: Request<State>) -> Result {
-    // let path = req.url().path();
-    // let path = path.trim_start_matches(&self.prefix);
+struct ServeDirEndpoint {
+    dir_path: PathBuf,
+    prefix: String,
+}
 
-    let path = req.param(prefix)?.trim_start_matches('/');
+#[async_trait]
+impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDirEndpoint {
+    async fn call(&self, req: Request<State>) -> Result {
+        let path = req.param(&self.prefix)?.trim_start_matches('/');
 
-    let mut dir_path = dir_path.clone();
-    for p in Path::new(path) {
-        if p == OsStr::new(".") {
-            continue;
-        } else if p == OsStr::new("..") {
-            dir_path.pop();
-        } else {
-            dir_path.push(&p);
+        let mut dir_path = self.dir_path.clone();
+        for p in Path::new(path) {
+            if p == OsStr::new(".") {
+                continue;
+            } else if p == OsStr::new("..") {
+                dir_path.pop();
+            } else {
+                dir_path.push(&p);
+            }
         }
+    
+        log::info!("Requested file: {:?}", dir_path);
+    
+        let file_path = AsyncPathBuf::from(dir_path);
+        // if !file_path.starts_with(&self.dir) {
+        //     log::warn!("Unauthorized attempt to read: {:?}", file_path);
+        //     return Ok(Response::new(StatusCode::Forbidden));
+        // }
+        if !file_path.exists().await {
+            log::warn!("File not found: {:?}", file_path);
+            return Ok(Response::new(StatusCode::NotFound));
+        }
+        let body = Body::from_file(&file_path).await?;
+        let mut res = Response::new(StatusCode::Ok);
+        res.set_body(body);
+        Ok(res)
     }
-
-    log::info!("Requested file: {:?}", dir_path);
-
-    let file_path = AsyncPathBuf::from(dir_path);
-    // if !file_path.starts_with(&self.dir) {
-    //     log::warn!("Unauthorized attempt to read: {:?}", file_path);
-    //     return Ok(Response::new(StatusCode::Forbidden));
-    // }
-    if !file_path.exists().await {
-        log::warn!("File not found: {:?}", file_path);
-        return Ok(Response::new(StatusCode::NotFound));
-    }
-    let body = Body::from_file(&file_path).await?;
-    let mut res = Response::new(StatusCode::Ok);
-    res.set_body(body);
-    Ok(res)
 }
 
 /// Extension method for the routebuilder to serve a single file
 pub trait ServeFile<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
     /// Same as serve_dir, but a single file
-    fn serve_file(&mut self, file: impl AsRef<Path>) -> io::Result<Self> {
+    fn serve_file(self, file: impl AsRef<Path>) -> io::Result<Self> {
         let file_path = file.as_ref().to_owned().canonicalize()?;
 
-        Ok(self.at("*path", |route| route.get( move |req| async { serve_file_endpoint(file_path.clone(), req).await})))
+        Ok(self.at("*path", |route| {
+            route.get(ServeFileEndpoint { file_path })
+        }))
     }
 }
 
 impl<State: Clone + Send + Sync + 'static, R: RouteBuilder<State>> ServeFile<State> for R {}
 
 /// Endpoint method for serving files, path is the path to the file to serve
-async fn serve_file_endpoint<State>(file_path: PathBuf, _req: Request<State>) -> Result {
-    let file_path = AsyncPathBuf::from(file_path);
+struct ServeFileEndpoint {
+    file_path: PathBuf,
+}
 
-    if !file_path.exists().await {
-        log::warn!("File not found: {:?}", file_path);
-        Ok(Response::new(StatusCode::NotFound))
-    }
-    else {
-        let body = Body::from_file(&file_path).await?;
-        let mut res = Response::new(StatusCode::Ok);
-        res.set_body(body);
-        Ok(res)
+#[async_trait]
+impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeFileEndpoint {
+    async fn call(&self, req: Request<State>) -> Result {
+        let file_path = AsyncPathBuf::from(self.file_path.clone());
+
+        if !file_path.exists().await {
+            log::warn!("File not found: {:?}", self.file_path);
+            Ok(Response::new(StatusCode::NotFound))
+        }
+        else {
+            let body = Body::from_file(&file_path).await?;
+            let mut res = Response::new(StatusCode::Ok);
+            res.set_body(body);
+            Ok(res)
+        }
     }
 }
