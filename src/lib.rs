@@ -125,7 +125,7 @@
 //!
 //! Serving directories is possible using `serve_dir`, this works the same as with normal Tide routes,
 //! fluent routes adds the `serve_file` convenience method for serving single files.
-//! ```rust
+//! ```rust,no_run
 //! # use tide::{Request, Result};
 //! use tide_fluent_routes::prelude::*;
 //! use tide_fluent_routes::fs::ServeFs;
@@ -134,9 +134,9 @@
 //!
 //! server.register(
 //!     root()
-//!         .serve_file("files/index.html")
+//!         .serve_file("files/index.html").unwrap()
 //!         .at("img", |r| r
-//!             .serve_dir("files/images")
+//!             .serve_dir("files/images").unwrap()
 //!         )
 //! );
 //! ```
