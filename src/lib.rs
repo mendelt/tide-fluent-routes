@@ -153,7 +153,7 @@ use tide::{Endpoint, Middleware};
 /// Start building a route. Returns a RouteBuilder for the root of your route
 pub fn root<State>() -> RouteSegment<State> {
     RouteSegment {
-        path: Path::new(),
+        path: Path::prefix("/"),
         middleware: Vec::new(),
         name: None,
         branches: Vec::new(),
@@ -218,7 +218,11 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
         self
     }
 
-    fn with<M: Middleware<State>, R: FnOnce(Self) -> Self>(mut self, middleware: M, routes: R) -> Self {
+    fn with<M: Middleware<State>, R: FnOnce(Self) -> Self>(
+        mut self,
+        middleware: M,
+        routes: R,
+    ) -> Self {
         let mut ware = self.middleware.clone();
         ware.push(ArcMiddleware::new(middleware));
 
@@ -322,8 +326,14 @@ mod test {
         // assert_eq!(routes.get(0).unwrap().route, Some(Method::Get));
         assert_eq!(
             routes.get(0).unwrap().path.to_string(),
-            "path/subpath".to_string()
+            "/path/subpath".to_string()
         );
+    }
+
+    #[test]
+    fn should_start_path_with_slash() {
+        let routes: Vec<_> = root::<()>().get(|_| async { Ok("") }).build();
+        assert_eq!(routes.get(0).unwrap().path.to_string(), "/".to_string());
     }
 
     fn middleware<'a>(

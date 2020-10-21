@@ -1,15 +1,15 @@
 //! Extension traits and endpoints for serving content from the file system
 
-use tide::{Endpoint, utils::async_trait};
-use tide::Response;
-use tide::Body;
-use std::ffi::OsStr;
 use crate::prelude::*;
-use std::io;
-use std::path::{Path, PathBuf};
-use tide::{Request, Result, StatusCode};
 use async_std::path::PathBuf as AsyncPathBuf;
 use log;
+use std::ffi::OsStr;
+use std::io;
+use std::path::{Path, PathBuf};
+use tide::Body;
+use tide::Response;
+use tide::{utils::async_trait, Endpoint};
+use tide::{Request, Result, StatusCode};
 
 /// Extension method for the routebuilder to serve a directory
 pub trait ServeDir<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
@@ -18,7 +18,10 @@ pub trait ServeDir<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
         let dir_path = dir.as_ref().to_owned().canonicalize()?;
 
         Ok(self.at("*path", |route| {
-            route.get( ServeDirEndpoint{dir_path, prefix: "*path".to_string()})
+            route.get(ServeDirEndpoint {
+                dir_path,
+                prefix: "*path".to_string(),
+            })
         }))
     }
 }
@@ -45,9 +48,9 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDirEndpoint 
                 dir_path.push(&p);
             }
         }
-    
+
         log::info!("Requested file: {:?}", dir_path);
-    
+
         let file_path = AsyncPathBuf::from(dir_path);
         // if !file_path.starts_with(&self.dir) {
         //     log::warn!("Unauthorized attempt to read: {:?}", file_path);
@@ -89,8 +92,7 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeFileEndpoint
         if !file_path.exists().await {
             log::warn!("File not found: {:?}", self.file_path);
             Ok(Response::new(StatusCode::NotFound))
-        }
-        else {
+        } else {
             let body = Body::from_file(&file_path).await?;
             let mut res = Response::new(StatusCode::Ok);
             res.set_body(body);

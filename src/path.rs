@@ -3,8 +3,9 @@
 pub(crate) struct Path(String);
 
 impl Path {
-    pub(crate) fn new() -> Self {
-        Path(String::new())
+    /// Create new path from a prefix
+    pub(crate) fn prefix(value: &str) -> Self {
+        Path(value.to_string())
     }
 
     pub(crate) fn append(self, segment: &str) -> Path {
@@ -31,7 +32,7 @@ mod test {
 
     #[test]
     fn should_handle_slashes_between_segments() {
-        let path = Path::new()
+        let path = Path::prefix("")
             .append("/tst1/")
             .append("tst2")
             .append("/tst3/")
@@ -43,14 +44,14 @@ mod test {
 
     #[test]
     fn should_preserve_prefix_slash() {
-        let path = Path::new().append("/tst1").append("tst2");
+        let path = Path::prefix("").append("/tst1").append("tst2");
 
         assert_eq!(path.to_string(), "/tst1/tst2");
     }
 
     #[test]
     fn should_preserve_trailing_slash() {
-        let path = Path::new().append("tst1").append("tst2/");
+        let path = Path::prefix("").append("tst1").append("tst2/");
 
         assert_eq!(path.to_string(), "tst1/tst2/");
     }
