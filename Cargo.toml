@@ -14,4 +14,4 @@ readme = "README.md"
 [dependencies]
 tide = "0.14.0"
 log = "0.4.11"
-async-std = ""
+async-std = "1.6.5"
