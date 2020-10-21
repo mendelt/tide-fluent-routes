@@ -8,10 +8,10 @@ use tide::{Endpoint, Middleware};
 /// to a route tree
 pub trait RouteBuilder<State: Clone + Send + Sync + 'static>: Sized {
     /// Add a path segment with a set of sub-routes
-    fn at<R: Fn(Self) -> Self>(self, path: &str, routes: R) -> Self;
+    fn at<R: FnOnce(Self) -> Self>(self, path: &str, routes: R) -> Self;
 
     /// Add middleware with a set of sub-routes
-    fn with<M: Middleware<State>, R: Fn(Self) -> Self>(self, middleware: M, routes: R) -> Self;
+    fn with<M: Middleware<State>, R: FnOnce(Self) -> Self>(self, middleware: M, routes: R) -> Self;
 
     /// Add an endpoint for an http method
     fn method(self, method: Method, endpoint: impl Endpoint<State>) -> Self;

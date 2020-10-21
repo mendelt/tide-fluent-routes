@@ -1,7 +1,6 @@
 //! Extension traits and endpoints for serving content from the file system
 
 use tide::{Endpoint, utils::async_trait};
-use core::cell::RefCell;
 use tide::Response;
 use tide::Body;
 use std::ffi::OsStr;
@@ -86,7 +85,7 @@ struct ServeFileEndpoint {
 
 #[async_trait]
 impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeFileEndpoint {
-    async fn call(&self, req: Request<State>) -> Result {
+    async fn call(&self, _req: Request<State>) -> Result {
         let file_path = AsyncPathBuf::from(self.file_path.clone());
 
         if !file_path.exists().await {

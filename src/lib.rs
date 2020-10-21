@@ -207,7 +207,7 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<State> {
-    fn at<R: Fn(Self) -> Self>(mut self, path: &str, routes: R) -> Self {
+    fn at<R: FnOnce(Self) -> Self>(mut self, path: &str, routes: R) -> Self {
         self.branches.push(routes(RouteSegment {
             path: self.path.clone().append(path),
             middleware: self.middleware.clone(),
@@ -218,7 +218,7 @@ impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<
         self
     }
 
-    fn with<M: Middleware<State>, R: Fn(Self) -> Self>(mut self, middleware: M, routes: R) -> Self {
+    fn with<M: Middleware<State>, R: FnOnce(Self) -> Self>(mut self, middleware: M, routes: R) -> Self {
         let mut ware = self.middleware.clone();
         ware.push(ArcMiddleware::new(middleware));
 
