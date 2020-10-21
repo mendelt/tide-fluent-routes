@@ -4,10 +4,8 @@ Tide Fluent Routes is a fluent api to define routes for the Tide HTTP framework.
 At the moment it supports setting up paths, you can integrate middleware at any place in the
 route-tree and you can integrate endpoints.
 Some things that are possible with Tide-native routes are not (yet) possible;
-- middleware does not work for now, there is support missing for this in Tide
 - Tide prefix routes are not implemented
 - you can not nest Tide servers
-- serving directories is not possible but a version of this is planned
 
 To use this you can import Tide Fluent Routes with `use tide_fluent_routes::prelude::* it
 introduces the `register` extension method on the `Tide::Server to register routes from a
@@ -47,7 +45,7 @@ server.register(
 This eliminates the need to introduce variables for partial pieces of your route tree.
 
 Including routes defined in other functions also looks very natural, this makes it easy
-to compose large route trees
+to compose large route trees from smaller trees defined elsewhere;
 ```rust
 
 fn v1_routes(routes: RouteSegment<()>) -> RouteSegment<()> {
@@ -77,10 +75,9 @@ server.register(
         .at("api/v2", v2_routes));
 ```
 
-Another problem with Tide routes is that middleware that is only active for certain routes can
-be difficult to maintain. Adding middleware to a tree is easy, and its very clear where the
-middleware is applied and where not; (this is still a prototype and middleware is not actually
-added right now)
+With vanilla Tide routes it can be hard to see what middleware is active for what
+endpoints.
+Adding middleware to a tree is easy, and its very clear where the middleware is applied;
 ```rust
 server.register(
     root()
