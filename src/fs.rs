@@ -20,7 +20,7 @@ pub trait ServeDir<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
         Ok(self.at("*path", |route| {
             route.get(ServeDirEndpoint {
                 dir_path,
-                prefix: "*path".to_string(),
+                prefix: "path".to_string(),
             })
         }))
     }
