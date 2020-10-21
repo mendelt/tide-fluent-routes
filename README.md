@@ -111,6 +111,7 @@ server.register(
             .serve_dir("files/images")
         )
 );
+```
 
 *version: 0.1.2*
 ## License

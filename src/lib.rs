@@ -139,6 +139,7 @@
 //!             .serve_dir("files/images")
 //!         )
 //! );
+//! ```
 
 // Turn on warnings for some lints
 #![warn(
