@@ -70,9 +70,7 @@ pub trait ServeFile<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
     fn serve_file(self, file: impl AsRef<Path>) -> io::Result<Self> {
         let file_path = file.as_ref().to_owned().canonicalize()?;
 
-        Ok(self.at("*path", |route| {
-            route.get(ServeFileEndpoint { file_path })
-        }))
+        Ok(self.get(ServeFileEndpoint { file_path }))
     }
 }
 
