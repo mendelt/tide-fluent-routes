@@ -11,8 +11,8 @@ use tide::Response;
 use tide::{utils::async_trait, Endpoint};
 use tide::{Request, Result, StatusCode};
 
-/// Extension method for the routebuilder to serve a directory
-pub trait ServeDir<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
+/// Extension methods for the routebuilder to serving files and directories
+pub trait ServeFs<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
     /// Serve a directory at a location
     fn serve_dir(self, dir: impl AsRef<Path>) -> io::Result<Self> {
         let dir_path = dir.as_ref().to_owned().canonicalize()?;
@@ -24,9 +24,16 @@ pub trait ServeDir<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
             })
         }))
     }
+
+    /// Same as serve_dir, but for a single file
+    fn serve_file(self, file: impl AsRef<Path>) -> io::Result<Self> {
+        let file_path = file.as_ref().to_owned().canonicalize()?;
+
+        Ok(self.get(ServeFileEndpoint { file_path }))
+    }
 }
 
-impl<State: Clone + Send + Sync + 'static, R: RouteBuilder<State>> ServeDir<State> for R {}
+impl<State: Clone + Send + Sync + 'static, R: RouteBuilder<State>> ServeFs<State> for R {}
 
 struct ServeDirEndpoint {
     dir_path: PathBuf,
@@ -52,10 +59,10 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDirEndpoint 
         log::info!("Requested file: {:?}", dir_path);
 
         let file_path = AsyncPathBuf::from(dir_path);
-        // if !file_path.starts_with(&self.dir) {
-        //     log::warn!("Unauthorized attempt to read: {:?}", file_path);
-        //     return Ok(Response::new(StatusCode::Forbidden));
-        // }
+        if !file_path.starts_with(&self.dir_path) {
+            log::warn!("Unauthorized attempt to read: {:?}", file_path);
+            return Ok(Response::new(StatusCode::Forbidden));
+        }
         if !file_path.exists().await {
             log::warn!("File not found: {:?}", file_path);
             return Ok(Response::new(StatusCode::NotFound));
@@ -66,18 +73,6 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDirEndpoint 
         Ok(res)
     }
 }
-
-/// Extension method for the routebuilder to serve a single file
-pub trait ServeFile<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
-    /// Same as serve_dir, but a single file
-    fn serve_file(self, file: impl AsRef<Path>) -> io::Result<Self> {
-        let file_path = file.as_ref().to_owned().canonicalize()?;
-
-        Ok(self.get(ServeFileEndpoint { file_path }))
-    }
-}
-
-impl<State: Clone + Send + Sync + 'static, R: RouteBuilder<State>> ServeFile<State> for R {}
 
 /// Endpoint method for serving files, path is the path to the file to serve
 struct ServeFileEndpoint {
