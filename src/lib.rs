@@ -89,7 +89,7 @@
 //!         .at("api/v2", v2_routes));
 //! ```
 //!
-//! With vanilla Tide routes it can be hard to see what middleware is active for what 
+//! With vanilla Tide routes it can be hard to see what middleware is active for what
 //! endpoints.
 //! Adding middleware to a tree is easy, and its very clear where the middleware is applied;
 //! ```rust
@@ -122,6 +122,23 @@
 //!         ),
 //! );
 //! ```
+//!
+//! Serving directories is possible using `serve_dir`, this works the same as with normal Tide routes,
+//! fluent routes adds the `serve_file` convenience method for serving single files.
+//! ```rust
+//! # use tide::{Request, Result};
+//! use tide_fluent_routes::prelude::*;
+//! use tide_fluent_routes::fs::ServeFs;
+//!
+//! let mut server = tide::Server::new();
+//!
+//! server.register(
+//!     root()
+//!         .serve_file("files/index.html")
+//!         .at("img", |r| r
+//!             .serve_dir("files/images")
+//!         )
+//! );
 
 // Turn on warnings for some lints
 #![warn(
