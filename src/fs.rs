@@ -67,7 +67,7 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDirEndpoint 
                 Err(e) if e.kind() == io::ErrorKind::NotFound => {
                     Ok(Response::new(StatusCode::NotFound))
                 }
-                Err(e) => Err(e)?,
+                Err(e) => Err(e.into()),
             }
         }
     }
@@ -86,7 +86,7 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeFileEndpoint
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
                 Ok(Response::new(StatusCode::NotFound))
             }
-            Err(e) => Err(e)?,
+            Err(e) => Err(e.into()),
         }
     }
 }
