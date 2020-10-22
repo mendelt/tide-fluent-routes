@@ -61,13 +61,14 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDirEndpoint 
         if !file_path.starts_with(&self.dir_path) {
             log::warn!("Unauthorized attempt to read: {:?}", file_path);
             Ok(Response::new(StatusCode::Forbidden))
-        } else if !file_path.exists().await {
-            log::warn!("File not found: {:?}", file_path);
-            Ok(Response::new(StatusCode::NotFound))
         } else {
-            Ok(Response::builder(StatusCode::Ok)
-                .body(Body::from_file(&file_path).await?)
-                .build())
+            match Body::from_file(&file_path).await {
+                Ok(body) => Ok(Response::builder(StatusCode::Ok).body(body).build()),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    Ok(Response::new(StatusCode::NotFound))
+                }
+                Err(e) => Err(e)?,
+            }
         }
     }
 }
@@ -80,13 +81,12 @@ struct ServeFileEndpoint {
 #[async_trait]
 impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeFileEndpoint {
     async fn call(&self, _req: Request<State>) -> Result {
-        if !self.file_path.exists().await {
-            log::warn!("File not found: {:?}", self.file_path);
-            Ok(Response::new(StatusCode::NotFound))
-        } else {
-            Ok(Response::builder(StatusCode::Ok)
-                .body(Body::from_file(&self.file_path).await?)
-                .build())
+        match Body::from_file(&self.file_path).await {
+            Ok(body) => Ok(Response::builder(StatusCode::Ok).body(body).build()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                Ok(Response::new(StatusCode::NotFound))
+            }
+            Err(e) => Err(e)?,
         }
     }
 }
