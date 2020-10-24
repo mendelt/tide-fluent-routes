@@ -7,8 +7,8 @@ Some things that are possible with Tide-native routes are not (yet) possible;
 - Tide prefix routes are not implemented
 - you can not nest Tide servers
 
-To use this you can import Tide Fluent Routes with `use tide_fluent_routes::prelude::* it
-introduces the `register` extension method on the `Tide::Server to register routes from a
+To use this you can import Tide Fluent Routes with `use tide_fluent_routes::prelude::*` it
+introduces the `register` extension method on the `Tide::Server` to register routes from a
 RouteBuilder.
 A RouteBuilder can be initialized using the `route()` method.
 You can register simple endpoints like this;
@@ -106,14 +106,14 @@ let mut server = tide::Server::new();
 
 server.register(
     root()
-        .serve_file("files/index.html")
+        .serve_file("files/index.html").unwrap()
         .at("img", |r| r
-            .serve_dir("files/images")
+            .serve_dir("files/images").unwrap()
         )
 );
 ```
 
-*version: 0.1.2*
+*version: 0.1.3*
 ## License
 
 Licensed under either of
