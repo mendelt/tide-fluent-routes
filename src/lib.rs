@@ -154,12 +154,14 @@
 
 pub mod fs;
 mod path;
+pub mod reverse_router;
 pub mod routebuilder;
 pub mod router;
 mod util;
 
 use crate::path::Path;
 use crate::util::{ArcMiddleware, BoxedEndpoint};
+use reverse_router::ReverseRouter;
 use routebuilder::RouteBuilder;
 use std::collections::HashMap;
 use tide::http::Method;
@@ -288,6 +290,7 @@ pub(crate) enum Route<State> {
 
 /// Import types to use tide_fluent_routes
 pub mod prelude {
+    pub use super::reverse_router::ReverseRouter;
     pub use super::routebuilder::{RouteBuilder, RouteBuilderExt};
     pub use super::router::Router;
     pub use super::{root, RouteSegment};
