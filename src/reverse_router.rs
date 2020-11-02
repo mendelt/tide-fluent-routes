@@ -15,8 +15,12 @@ impl ReverseRouter {
     }
 
     /// Resolve a named route
-    pub fn resolve(&self, name: &str) -> String {
-        self.routes[name].clone()
+    pub fn resolve(&self, name: &str, _params: Params) -> String {
+        let route = self.routes[name].clone();
+
+        // todo: replace params with values
+
+        route
     }
 
     /// Construct a named routes list
@@ -24,5 +28,21 @@ impl ReverseRouter {
         ReverseRouter {
             routes: HashMap::new(),
         }
+    }
+}
+
+/// Parameters for insertion in paths
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Params(HashMap<String, String>);
+
+impl Params {
+    /// Create new params
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Insert a parameter
+    pub fn insert(&mut self, param: String, value: String) {
+        self.0.insert(param, value);
     }
 }
