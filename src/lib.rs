@@ -192,6 +192,42 @@ pub struct RouteSegment<State> {
 }
 
 impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
+    fn names(&self) -> Vec<RouteDescriptor<State>> {
+        let path = self.path.clone();
+
+        let local_name = self
+            .name
+            .clone()
+            .map(|name| RouteDescriptor {
+                path: path.clone(),
+                middleware: Vec::new(), // We don't care about middleware for route names
+                route: Route::Name(name),
+            })
+            .into_iter();
+
+        let sub_routes = self.branches.iter().flat_map(RouteSegment::names);
+
+        local_name.chain(sub_routes).collect()
+    }
+
+    /// Construct a reverse router for the paths in the route builder
+    pub fn reverse_router(&self) -> ReverseRouter {
+        let mut routes = ReverseRouter::new();
+
+        for RouteDescriptor {
+            path,
+            middleware: _,
+            route,
+        } in self.names()
+        {
+            if let Route::Name(name) = route {
+                routes.insert(&name, &path.to_string());
+            }
+        }
+
+        routes
+    }
+
     fn build(self) -> Vec<RouteDescriptor<State>> {
         let path = self.path;
         let middleware = self.middleware;
@@ -205,21 +241,9 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
                     route: Route::Handler(method, endpoint),
                 });
 
-        let local_name = self
-            .name
-            .map(|name| RouteDescriptor {
-                path: path.clone(),
-                middleware: Vec::new(), // We don't care about middleware for named routes for now
-                route: Route::Name(name),
-            })
-            .into_iter();
-
         let sub_endpoints = self.branches.into_iter().flat_map(RouteSegment::build);
 
-        local_endpoints
-            .chain(local_name)
-            .chain(sub_endpoints)
-            .collect()
+        local_endpoints.chain(sub_endpoints).collect()
     }
 }
 
