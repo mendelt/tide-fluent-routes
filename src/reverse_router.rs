@@ -42,8 +42,8 @@ impl Params {
     }
 
     /// Insert a parameter
-    pub fn insert(&mut self, param: String, value: String) {
-        self.0.insert(param, value);
+    pub fn insert<P: ToString, V: ToString>(&mut self, param: P, value: V) {
+        self.0.insert(param.to_string(), value.to_string());
     }
 }
 
@@ -52,7 +52,7 @@ impl Params {
 macro_rules! params {
     ($( $param:expr => $value:expr ),* ) => {{
         let mut pm: Params = Params::new();
-        $(pm.insert($param.to_string(), $value.to_string());)*
+        $(pm.insert($param.to_string(), $value);)*
         pm
     }};
 }
@@ -63,10 +63,10 @@ mod test {
 
     #[test]
     fn should_construct_params() {
-        let params = params! {"thing" => "value"};
+        let params = params! {"thing" => 5};
 
         let mut expected = Params::new();
-        expected.insert("thing".to_string(), "value".to_string());
+        expected.insert("thing".to_string(), 5);
 
         assert_eq!(params, expected);
     }
