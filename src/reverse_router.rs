@@ -46,3 +46,21 @@ impl Params {
         self.0.insert(param, value);
     }
 }
+
+macro_rules! params {
+    ($( $param:expr => $value:expr ),* ) => {{
+        let mut pm: Params = Params::new();
+        $(pm.insert($param.to_string(), $value.to_string());)*
+        pm
+    }};
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn should_construct_params() {
+        let params = params! {"thing" => "value"};
+    }
+}
