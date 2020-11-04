@@ -69,7 +69,6 @@ mod test {
     fn should_construct_empty_params() {
         let params = params! {};
         assert_eq!(params, Params::new());
-
     }
 
     #[test]
