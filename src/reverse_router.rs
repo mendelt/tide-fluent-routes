@@ -70,4 +70,15 @@ mod test {
 
         assert_eq!(params, expected);
     }
+
+    #[test]
+    fn should_construct_multi_value_params() {
+        let params = params! {"thing1" => 5, "thing2" => "another thing"};
+
+        let mut expected = Params::new();
+        expected.insert("thing1".to_string(), 5);
+        expected.insert("thing2", "another thing");
+
+        assert_eq!(params, expected);
+    }
 }
