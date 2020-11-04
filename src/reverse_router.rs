@@ -50,7 +50,11 @@ impl Params {
 /// Construct parameters for the reverse router
 #[macro_export]
 macro_rules! params {
-    ($( $param:expr => $value:expr ),* ) => {{
+    () => {{
+        Params::new()
+    }};
+
+    ($( $param:expr => $value:expr ),+ ) => {{
         let mut pm: Params = Params::new();
         $(pm.insert($param.to_string(), $value);)*
         pm
@@ -60,6 +64,13 @@ macro_rules! params {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn should_construct_empty_params() {
+        let params = params! {};
+        assert_eq!(params, Params::new());
+
+    }
 
     #[test]
     fn should_construct_params() {
