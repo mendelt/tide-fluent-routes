@@ -12,9 +12,9 @@ keywords = ["tide", "http", "web", "routing"]
 readme = "README.md"
 
 [dependencies]
-tide = "0.15.0"
-log = "0.4.11"
-async-std = "1.6.5"
+tide = "0.16"
+log = "0.4"
+async-std = "1.6"
 
 [dev-dependencies]
-async-std = { version = "1.6.5", features = ["attributes"] }
+async-std = { version = "1.6", features = ["attributes"] }
