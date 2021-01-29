@@ -1,6 +1,6 @@
 [package]
 name = "tide-fluent-routes"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2018"
 
 authors = ["Mendelt Siebenga <msiebenga@gmail.com>"]
