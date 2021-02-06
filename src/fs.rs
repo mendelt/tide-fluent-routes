@@ -14,36 +14,41 @@ use tide::{Request, Result, StatusCode};
 /// Extension methods for the routebuilder to serving files and directories
 pub trait ServeFs<State: Clone + Send + Sync + 'static>: RouteBuilder<State> {
     /// Serve a directory at a location
-    fn serve_dir(self, dir: impl AsRef<Path>) -> io::Result<Self> {
-        let dir_path = AsyncPathBuf::from(dir.as_ref().to_owned().canonicalize()?);
-
-        Ok(self.at("*path", |route| {
-            route.get(ServeDirEndpoint {
-                dir_path,
-                prefix: "path".to_string(),
-            })
-        }))
+    fn serve_dir(self, dir_path: impl AsRef<Path>) -> io::Result<Self> {
+        let endpoint = ServeDir::serve(dir_path, "*path")?;
+        Ok(self.at("*path", |route| route.get(endpoint)))
     }
 
     /// Same as serve_dir, but for a single file
-    fn serve_file(self, file: impl AsRef<Path>) -> io::Result<Self> {
-        let file_path = AsyncPathBuf::from(file.as_ref().to_owned().canonicalize()?);
-
-        Ok(self.get(ServeFileEndpoint { file_path }))
+    fn serve_file(self, file_path: impl AsRef<Path>) -> io::Result<Self> {
+        Ok(self.get(ServeFile::serve(file_path)?))
     }
 }
 
 impl<State: Clone + Send + Sync + 'static, R: RouteBuilder<State>> ServeFs<State> for R {}
 
-struct ServeDirEndpoint {
+/// Endpoint for serving a directory
+#[derive(Clone, Debug, PartialEq)]
+pub struct ServeDir {
     dir_path: AsyncPathBuf,
-    prefix: String,
+    pattern: String,
+}
+
+impl ServeDir {
+    /// Construct an endpoint for serving a directory. dir_path is the path of the directory to serve
+    /// pattern is the name of the pattern from the request.
+    fn serve(dir_path: impl AsRef<Path>, pattern: &str) -> io::Result<Self> {
+        Ok(Self {
+            dir_path: AsyncPathBuf::from(dir_path.as_ref().to_owned().canonicalize()?),
+            pattern: pattern.to_string(),
+        })
+    }
 }
 
 #[async_trait]
-impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDirEndpoint {
+impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDir {
     async fn call(&self, req: Request<State>) -> Result {
-        let path = req.param(&self.prefix)?.trim_start_matches('/');
+        let path = req.param(&self.pattern)?.trim_start_matches('/');
 
         let mut file_path = self.dir_path.clone();
         for p in Path::new(path) {
@@ -73,13 +78,22 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDirEndpoint 
     }
 }
 
-/// Endpoint method for serving files, path is the path to the file to serve
-struct ServeFileEndpoint {
+/// Endpoint for serving files, file_path is the path to the file to serve
+#[derive(Clone, Debug, PartialEq)]
+pub struct ServeFile {
     file_path: AsyncPathBuf,
 }
 
+impl ServeFile {
+    fn serve(file_path: impl AsRef<Path>) -> io::Result<Self> {
+        Ok(Self {
+            file_path: AsyncPathBuf::from(file_path.as_ref().to_owned().canonicalize()?),
+        })
+    }
+}
+
 #[async_trait]
-impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeFileEndpoint {
+impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeFile {
     async fn call(&self, _req: Request<State>) -> Result {
         match Body::from_file(&self.file_path).await {
             Ok(body) => Ok(Response::builder(StatusCode::Ok).body(body).build()),
