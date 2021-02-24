@@ -51,13 +51,13 @@ impl<State: Clone + Send + Sync + 'static> Endpoint<State> for ServeDir {
         let path = req.param(&self.pattern)?.trim_start_matches('/');
 
         let mut file_path = self.dir_path.clone();
-        for p in Path::new(path) {
-            if p == OsStr::new(".") {
+        for path_segment in Path::new(path) {
+            if path_segment == OsStr::new(".") {
                 continue;
-            } else if p == OsStr::new("..") {
+            } else if path_segment == OsStr::new("..") {
                 file_path.pop();
             } else {
-                file_path.push(&p);
+                file_path.push(&path_segment);
             }
         }
 
