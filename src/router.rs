@@ -1,8 +1,8 @@
 //! The router trait and its implementation on tide::Server connect the RouteBuilder to tide and
 //! allows you to call register on a tide::Server with a fluent route tree
 
-use crate::{util::ArcMiddleware, Result};
 use crate::routesegment::{Route, RouteDescriptor, RouteSegment};
+use crate::{util::ArcMiddleware, Result};
 use tide::{http::Method, Endpoint};
 
 /// A router is any component where routes can be registered on like a tide::Server

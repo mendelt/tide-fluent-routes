@@ -1,8 +1,8 @@
-use crate::Result;
 use crate::path::Path;
-use crate::util::{ArcMiddleware, BoxedEndpoint};
 use crate::reverse_router::ReverseRouter;
 use crate::routebuilder::RouteBuilder;
+use crate::util::{ArcMiddleware, BoxedEndpoint};
+use crate::Result;
 use std::collections::HashMap;
 use tide::http::Method;
 use tide::{Endpoint, Middleware};
@@ -89,79 +89,63 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
 
 impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for Result<RouteSegment<State>> {
     fn at<R: FnOnce(Self) -> Self>(self, path: &str, routes: R) -> Self {
-        match self {
-            Ok(mut segment) => {
-                segment.branches.push(routes(Ok(RouteSegment {
-                    path: segment.path.clone().append(path),
-                    middleware: segment.middleware.clone(),
-                    name: None,
-                    branches: Vec::new(),
-                    endpoints: HashMap::new(),
-                }))?);
-                Ok(segment)
-            }
-            Err(e) => Err(e),
-        }
+        let mut segment = self?;
+
+        segment.branches.push(routes(Ok(RouteSegment {
+            path: segment.path.clone().append(path),
+            middleware: segment.middleware.clone(),
+            name: None,
+            branches: Vec::new(),
+            endpoints: HashMap::new(),
+        }))?);
+        Ok(segment)
     }
 
     fn with<M: Middleware<State>, R: FnOnce(Self) -> Self>(self, middleware: M, routes: R) -> Self {
-        match self {
-            Ok(mut segment) => {
-                let mut ware = segment.middleware.clone();
-                ware.push(ArcMiddleware::new(middleware));
+        let mut segment = self?;
+        let mut ware = segment.middleware.clone();
 
-                segment.branches.push(routes(Ok(RouteSegment {
-                    path: segment.path.clone(),
-                    middleware: ware,
-                    name: None,
-                    branches: Vec::new(),
-                    endpoints: HashMap::new(),
-                }))?);
-                Ok(segment)
-            }
-            Err(e) => Err(e),
-        }
+        ware.push(ArcMiddleware::new(middleware));
+
+        segment.branches.push(routes(Ok(RouteSegment {
+            path: segment.path.clone(),
+            middleware: ware,
+            name: None,
+            branches: Vec::new(),
+            endpoints: HashMap::new(),
+        }))?);
+        Ok(segment)
     }
 
     fn method(self, method: Method, endpoint: impl Endpoint<State>) -> Self {
-        match self {
-            Ok(mut segment) => {
-                segment
-                    .endpoints
-                    .insert(Some(method), BoxedEndpoint::new(endpoint));
-                Ok(segment)
-            }
-            Err(e) => Err(e),
-        }
+        let mut segment = self?;
+
+        segment
+            .endpoints
+            .insert(Some(method), BoxedEndpoint::new(endpoint));
+        Ok(segment)
     }
 
     fn all(self, endpoint: impl Endpoint<State>) -> Self {
-        match self {
-            Ok(mut segment) => {
-                segment.endpoints.insert(None, BoxedEndpoint::new(endpoint));
-                Ok(segment)
-            }
-            Err(e) => Err(e),
-        }
+        let mut segment = self?;
+
+        segment.endpoints.insert(None, BoxedEndpoint::new(endpoint));
+        Ok(segment)
     }
 
     fn name(self, name: &str) -> Self {
-        match self {
-            Ok(mut segment) => {
-                if let Some(name) = segment.name {
-                    panic!("route already has name: {}", name);
-                }
-                segment.name = Some(name.to_string());
-                Ok(segment)
-            }
-            Err(e) => Err(e),
+        let mut segment = self?;
+
+        if let Some(name) = segment.name {
+            panic!("route already has name: {}", name);
         }
+        segment.name = Some(name.to_string());
+        Ok(segment)
     }
 }
 
 /// Partial routing results for passing around in routing closures
 pub type SubRoute<T> = Result<RouteSegment<T>>;
-
 
 /// Describes a branch in the route tree, the path and middleware collected and the route as the leaf
 #[derive(Debug)]

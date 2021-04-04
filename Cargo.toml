@@ -12,7 +12,6 @@ keywords = ["tide", "http", "web", "routing"]
 readme = "README.md"
 
 [dependencies]
-http-types = ""
 tide = "0.16"
 log = "0.4"
 async-std = "1.9"
