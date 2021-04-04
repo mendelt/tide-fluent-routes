@@ -63,7 +63,7 @@
 //! # }
 //! # let mut server = tide::Server::new();
 //!
-//! fn v1_routes(routes: Result<RouteSegment<()>>) -> Result<RouteSegment<()>> {
+//! fn v1_routes(routes: SubRoute<()>) -> SubRoute<()> {
 //!     routes
 //!         .at("articles", |route| route
 //!             .get(endpoint)
@@ -76,7 +76,7 @@
 //!         )
 //! }
 //!
-//! fn v2_routes(routes: Result<RouteSegment<()>>) -> Result<RouteSegment<()>> {
+//! fn v2_routes(routes: SubRoute<()>) -> SubRoute<()> {
 //!     routes
 //!         .at("articles", |route| route
 //!             .get(endpoint))
@@ -169,7 +169,13 @@ use std::collections::HashMap;
 use tide::http::Method;
 use tide::{Endpoint, Middleware};
 
-pub use http_types::Error;
+pub use tide::Error;
+
+/// The result type for fluent routing
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Partial routing results for passing around in routing closures
+pub type SubRoute<T> = Result<RouteSegment<T>>;
 
 /// Start building a route. Returns a RouteBuilder for the root of your route
 pub fn root<State>() -> Result<RouteSegment<State>> {
@@ -343,12 +349,9 @@ pub mod prelude {
     pub use super::reverse_router::ReverseRouter;
     pub use super::routebuilder::{RouteBuilder, RouteBuilderExt};
     pub use super::router::Router;
-    pub use super::{root, RouteSegment};
+    pub use super::{root, RouteSegment, SubRoute};
     pub use tide::http::Method;
 }
-
-/// The result type for fluent routing
-pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
 mod test {
