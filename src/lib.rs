@@ -22,7 +22,8 @@
 //! server.register(
 //!    root()
 //!        .get(endpoint)
-//!        .post(endpoint));
+//!        .post(endpoint)
+//!    ).expect("Error setting up routes");
 //! ```
 //! Fluent Routes follows conventions from Tide. All HTTP verbs are supported the same way. Paths
 //! can be extended using `at` but this method takes a router closure that allows building the route
@@ -48,7 +49,7 @@
 //!             .get(endpoint)
 //!             .post(endpoint)
 //!         )
-//! );
+//! ).expect("Error setting up routes");
 //! ```
 //! This eliminates the need to introduce variables for partial pieces of your route tree.
 //!
@@ -62,7 +63,7 @@
 //! # }
 //! # let mut server = tide::Server::new();
 //!
-//! fn v1_routes(routes: RouteSegment<()>) -> RouteSegment<()> {
+//! fn v1_routes(routes: Result<RouteSegment<()>>) -> Result<RouteSegment<()>> {
 //!     routes
 //!         .at("articles", |route| route
 //!             .get(endpoint)
@@ -75,7 +76,7 @@
 //!         )
 //! }
 //!
-//! fn v2_routes(routes: RouteSegment<()>) -> RouteSegment<()> {
+//! fn v2_routes(routes: Result<RouteSegment<()>>) -> Result<RouteSegment<()>> {
 //!     routes
 //!         .at("articles", |route| route
 //!             .get(endpoint))
@@ -86,7 +87,8 @@
 //!         .get(endpoint)
 //!         .post(endpoint)
 //!         .at("api/v1", v1_routes)
-//!         .at("api/v2", v2_routes));
+//!         .at("api/v2", v2_routes)
+//! ).expect("Error setting up routes");
 //! ```
 //!
 //! With vanilla Tide routes it can be hard to see what middleware is active for what
@@ -167,18 +169,20 @@ use std::collections::HashMap;
 use tide::http::Method;
 use tide::{Endpoint, Middleware};
 
+pub use http_types::Error;
+
 /// Start building a route. Returns a RouteBuilder for the root of your route
-pub fn root<State>() -> RouteSegment<State> {
-    RouteSegment {
+pub fn root<State>() -> Result<RouteSegment<State>> {
+    Ok(RouteSegment {
         path: Path::prefix("/"),
         middleware: Vec::new(),
         name: None,
         branches: Vec::new(),
         endpoints: HashMap::new(),
-    }
+    })
 }
 
-/// A Builder for Tide routes. RouteBuilders can be composed into a tree that represents the tree of
+/// A segment of a tide route tree. RouteSegments can be composed into trees that represents a tree of
 /// path segments, middleware and endpoints that defines the routes in a Tide application. This tree
 /// can then be returned as a list of routes to each of the endpoints.
 #[derive(Debug)]
@@ -247,53 +251,75 @@ impl<State: Clone + Send + Sync + 'static> RouteSegment<State> {
     }
 }
 
-impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for RouteSegment<State> {
-    fn at<R: FnOnce(Self) -> Self>(mut self, path: &str, routes: R) -> Self {
-        self.branches.push(routes(RouteSegment {
-            path: self.path.clone().append(path),
-            middleware: self.middleware.clone(),
-            name: None,
-            branches: Vec::new(),
-            endpoints: HashMap::new(),
-        }));
-        self
-    }
-
-    fn with<M: Middleware<State>, R: FnOnce(Self) -> Self>(
-        mut self,
-        middleware: M,
-        routes: R,
-    ) -> Self {
-        let mut ware = self.middleware.clone();
-        ware.push(ArcMiddleware::new(middleware));
-
-        self.branches.push(routes(RouteSegment {
-            path: self.path.clone(),
-            middleware: ware,
-            name: None,
-            branches: Vec::new(),
-            endpoints: HashMap::new(),
-        }));
-        self
-    }
-
-    fn method(mut self, method: Method, endpoint: impl Endpoint<State>) -> Self {
-        self.endpoints
-            .insert(Some(method), BoxedEndpoint::new(endpoint));
-        self
-    }
-
-    fn all(mut self, endpoint: impl Endpoint<State>) -> Self {
-        self.endpoints.insert(None, BoxedEndpoint::new(endpoint));
-        self
-    }
-
-    fn name(mut self, name: &str) -> Self {
-        if let Some(name) = self.name {
-            panic!("route already has name: {}", name);
+impl<State: Clone + Send + Sync + 'static> RouteBuilder<State> for Result<RouteSegment<State>> {
+    fn at<R: FnOnce(Self) -> Self>(self, path: &str, routes: R) -> Self {
+        match self {
+            Ok(mut segment) => {
+                segment.branches.push(routes(Ok(RouteSegment {
+                    path: segment.path.clone().append(path),
+                    middleware: segment.middleware.clone(),
+                    name: None,
+                    branches: Vec::new(),
+                    endpoints: HashMap::new(),
+                }))?);
+                Ok(segment)
+            }
+            Err(e) => Err(e),
         }
-        self.name = Some(name.to_string());
-        self
+    }
+
+    fn with<M: Middleware<State>, R: FnOnce(Self) -> Self>(self, middleware: M, routes: R) -> Self {
+        match self {
+            Ok(mut segment) => {
+                let mut ware = segment.middleware.clone();
+                ware.push(ArcMiddleware::new(middleware));
+
+                segment.branches.push(routes(Ok(RouteSegment {
+                    path: segment.path.clone(),
+                    middleware: ware,
+                    name: None,
+                    branches: Vec::new(),
+                    endpoints: HashMap::new(),
+                }))?);
+                Ok(segment)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn method(self, method: Method, endpoint: impl Endpoint<State>) -> Self {
+        match self {
+            Ok(mut segment) => {
+                segment
+                    .endpoints
+                    .insert(Some(method), BoxedEndpoint::new(endpoint));
+                Ok(segment)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn all(self, endpoint: impl Endpoint<State>) -> Self {
+        match self {
+            Ok(mut segment) => {
+                segment.endpoints.insert(None, BoxedEndpoint::new(endpoint));
+                Ok(segment)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn name(self, name: &str) -> Self {
+        match self {
+            Ok(mut segment) => {
+                if let Some(name) = segment.name {
+                    panic!("route already has name: {}", name);
+                }
+                segment.name = Some(name.to_string());
+                Ok(segment)
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -321,6 +347,9 @@ pub mod prelude {
     pub use tide::http::Method;
 }
 
+/// The result type for fluent routing
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[cfg(test)]
 mod test {
     use super::prelude::*;
@@ -331,7 +360,7 @@ mod test {
 
     #[test]
     fn should_build_single_endpoint() {
-        let routes: Vec<_> = root::<()>().get(|_| async { Ok("") }).build();
+        let routes: Vec<_> = root::<()>().get(|_| async { Ok("") }).unwrap().build();
 
         assert_eq!(routes.len(), 1);
     }
@@ -341,6 +370,7 @@ mod test {
         let routes: Vec<_> = root::<()>()
             .get(|_| async { Ok("") })
             .post(|_| async { Ok("") })
+            .unwrap()
             .build();
 
         assert_eq!(routes.len(), 2);
@@ -352,6 +382,7 @@ mod test {
             .at("sub_path", |r| {
                 r.get(|_| async { Ok("") }).post(|_| async { Ok("") })
             })
+            .unwrap()
             .build();
 
         assert_eq!(routes.len(), 2);
@@ -361,6 +392,7 @@ mod test {
     fn should_build_endpoint_path() {
         let routes: Vec<_> = root::<()>()
             .at("path", |r| r.at("subpath", |r| r.get(|_| async { Ok("") })))
+            .unwrap()
             .build();
 
         assert_eq!(routes.len(), 1);
@@ -374,7 +406,7 @@ mod test {
 
     #[test]
     fn should_start_path_with_slash() {
-        let routes: Vec<_> = root::<()>().get(|_| async { Ok("") }).build();
+        let routes: Vec<_> = root::<()>().get(|_| async { Ok("") }).unwrap().build();
         assert_eq!(routes.get(0).unwrap().path.to_string(), "/".to_string());
     }
 
@@ -399,6 +431,7 @@ mod test {
                     .get(|_| async { Ok("") })
                 })
             })
+            .unwrap()
             .build();
 
         assert_eq!(routes.get(0).unwrap().middleware.len(), 1);
